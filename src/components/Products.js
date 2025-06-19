@@ -1,29 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 function Products() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [products, setProducts] = useState([
-    {
-      id: 1,
-      name: 'Vitamina D3',
-      category: 'Vitaminas',
-      suggestedInfo: 'Fortalece huesos y sistema inmune',
-      keywords: ['vitamina', 'huesos', 'inmunidad'],
-      price: 25.99,
-      currency: 'USD',
-      image: 'https://images.pexels.com/photos/3683074/pexels-photo-3683074.jpeg?auto=compress&cs=tinysrgb&w=300'
-    },
-    {
-      id: 2,
-      name: 'Omega 3',
-      category: 'Suplementos',
-      suggestedInfo: 'Mejora la salud cardiovascular',
-      keywords: ['omega', 'corazón', 'cardiovascular'],
-      price: 32.50,
-      currency: 'USD',
-      image: 'https://images.pexels.com/photos/3683081/pexels-photo-3683081.jpeg?auto=compress&cs=tinysrgb&w=300'
-    }
-  ]);
+  const [products, setProducts] = useState([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -40,6 +19,13 @@ function Products() {
 
   const categories = ['Vitaminas', 'Suplementos', 'Minerales', 'Proteínas', 'Antioxidantes', 'Probióticos'];
   const currencies = ['USD', 'EUR', 'MXN', 'COP', 'ARS'];
+
+  useEffect(() => {
+    fetch('http://localhost:4000/products')
+      .then(res => res.json())
+      .then(data => setProducts(data))
+      .catch(err => console.error(err));
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -83,18 +69,31 @@ function Products() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const newProduct = {
-      id: products.length + 1,
-      ...formData,
-      price: parseFloat(formData.price)
-    };
-    setProducts(prev => [...prev, newProduct]);
-    closeModal();
+    fetch('http://localhost:4000/products', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ...formData,
+        price: parseFloat(formData.price)
+      })
+    })
+      .then(res => res.json())
+      .then((product) => {
+        setProducts(prev => [...prev, product]);
+        closeModal();
+      })
+      .catch(err => console.error(err));
   };
 
   const deleteProduct = (productId) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
-      setProducts(prev => prev.filter(product => product.id !== productId));
+      fetch(`http://localhost:4000/products/${productId}`, { method: 'DELETE' })
+        .then(() => {
+          setProducts(prev => prev.filter(product => product._id !== productId));
+        })
+        .catch(err => console.error(err));
     }
   };
 
@@ -138,7 +137,7 @@ function Products() {
         {/* Products Grid */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {products.map((product) => (
-            <div key={product.id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div key={product._id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
               <div className="mb-4">
                 <img
                   src={product.image}
@@ -170,7 +169,7 @@ function Products() {
                       Editar
                     </button>
                     <button 
-                      onClick={() => deleteProduct(product.id)}
+                      onClick={() => deleteProduct(product._id)}
                       className="text-red-600 hover:text-red-700 font-medium text-sm"
                     >
                       Eliminar
