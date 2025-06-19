@@ -4,6 +4,5 @@
 @tailwind utilities;
 
 body {
-  @apply m-0 bg-gray-100 font-sans;
-
+  @apply m-0 bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300 min-h-screen font-sans;
 }

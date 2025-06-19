@@ -10,10 +10,11 @@ function Sidebar() {
     'Configuración',
   ];
   return (
-    <aside className="bg-blue-600 text-white w-48 p-5">
-      <ul className="space-y-4">
+    <aside className="bg-gradient-to-b from-blue-600 to-blue-800 text-white w-60 p-6 rounded-r-3xl shadow-lg">
+      <ul className="space-y-3">
         {entries.map((entry) => (
-          <li key={entry} className="cursor-pointer hover:underline">
+          <li key={entry} className="cursor-pointer text-sm md:text-base px-3 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center">
+            <span className="mr-2">➔</span>
             {entry}
           </li>
         ))}
