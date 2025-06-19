@@ -1,0 +1,17 @@
+.Sidebar {
+  background-color: #005bbb;
+  color: white;
+  width: 200px;
+  padding: 20px;
+}
+
+.Sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.Sidebar li {
+  margin-bottom: 15px;
+  cursor: pointer;
+}
