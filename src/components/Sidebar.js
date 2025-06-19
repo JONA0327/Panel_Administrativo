@@ -1,6 +1,6 @@
 import React from 'react';
 
-function Sidebar() {
+function Sidebar({ currentView, setCurrentView }) {
   const entries = [
     { name: 'Dashboard', icon: '📊' },
     { name: 'Productos', icon: '📦' },
@@ -21,17 +21,20 @@ function Sidebar() {
       
       <nav>
         <ul className="space-y-2">
-          {entries.map((entry, index) => (
+          {entries.map((entry) => (
             <li key={entry.name}>
-              <button className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center space-x-3 group ${
-                index === 0 
-                  ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}>
+              <button 
+                onClick={() => setCurrentView(entry.name)}
+                className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center space-x-3 group ${
+                  currentView === entry.name
+                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
                 <span className="text-lg">{entry.icon}</span>
                 <span className="font-medium">{entry.name}</span>
                 <span className={`ml-auto transition-transform duration-200 ${
-                  index === 0 ? 'text-white' : 'text-gray-400 group-hover:translate-x-1'
+                  currentView === entry.name ? 'text-white' : 'text-gray-400 group-hover:translate-x-1'
                 }`}>
                   →
                 </span>
