@@ -1,5 +1,6 @@
 import React from 'react';
 
+
 function Sidebar() {
   const entries = [
     'Productos',
@@ -18,6 +19,7 @@ function Sidebar() {
         ))}
       </ul>
     </aside>
+
   );
 }
 
