@@ -1,11 +1,11 @@
 import React from 'react';
-import './Dashboard.css';
+
 
 function Dashboard() {
   return (
-    <div className="Dashboard">
-      <h1>Bienvenido al Panel Administrativo</h1>
-    </div>
+    <main className="flex-1 p-10">
+      <h1 className="text-2xl font-semibold">Bienvenido al Panel Administrativo</h1>
+    </main>
   );
 }
 

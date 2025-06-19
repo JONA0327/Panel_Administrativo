@@ -1,16 +1,25 @@
 import React from 'react';
-import './Sidebar.css';
+
 
 function Sidebar() {
-  const entries = ['Productos', 'Paquetes', 'Índice de Enfermedades', 'Testimonios', 'Configuración'];
+  const entries = [
+    'Productos',
+    'Paquetes',
+    'Índice de Enfermedades',
+    'Testimonios',
+    'Configuración',
+  ];
   return (
-    <div className="Sidebar">
-      <ul>
-        {entries.map(entry => (
-          <li key={entry}>{entry}</li>
+    <aside className="bg-blue-600 text-white w-48 p-5">
+      <ul className="space-y-4">
+        {entries.map((entry) => (
+          <li key={entry} className="cursor-pointer hover:underline">
+            {entry}
+          </li>
         ))}
       </ul>
-    </div>
+    </aside>
+
   );
 }
 
