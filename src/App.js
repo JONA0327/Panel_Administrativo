@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Products from './components/Products';
+import Packages from './components/Packages';
+import Diseases from './components/Diseases';
+import Testimonials from './components/Testimonials';
 
 function App() {
   const [currentView, setCurrentView] = useState('Dashboard');
@@ -12,6 +15,12 @@ function App() {
         return <Dashboard />;
       case 'Productos':
         return <Products />;
+      case 'Paquetes':
+        return <Packages />;
+      case 'Índice de Enfermedades':
+        return <Diseases />;
+      case 'Testimonios':
+        return <Testimonials />;
       default:
         return <Dashboard />;
     }

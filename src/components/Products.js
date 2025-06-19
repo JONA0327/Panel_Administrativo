@@ -32,7 +32,8 @@ function Products() {
     keywords: [],
     price: '',
     currency: 'USD',
-    image: ''
+    image: '',
+    imageFile: null
   });
 
   const [currentKeyword, setCurrentKeyword] = useState('');
@@ -46,6 +47,21 @@ function Products() {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setFormData(prev => ({
+          ...prev,
+          image: e.target.result,
+          imageFile: file
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const addKeyword = () => {
@@ -73,16 +89,13 @@ function Products() {
       price: parseFloat(formData.price)
     };
     setProducts(prev => [...prev, newProduct]);
-    setFormData({
-      name: '',
-      category: '',
-      suggestedInfo: '',
-      keywords: [],
-      price: '',
-      currency: 'USD',
-      image: ''
-    });
-    setIsModalOpen(false);
+    closeModal();
+  };
+
+  const deleteProduct = (productId) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+      setProducts(prev => prev.filter(product => product.id !== productId));
+    }
   };
 
   const closeModal = () => {
@@ -94,7 +107,8 @@ function Products() {
       keywords: [],
       price: '',
       currency: 'USD',
-      image: ''
+      image: '',
+      imageFile: null
     });
     setCurrentKeyword('');
   };
@@ -151,9 +165,17 @@ function Products() {
                   <span className="text-xl font-bold text-slate-800">
                     {product.currency} ${product.price}
                   </span>
-                  <button className="text-blue-600 hover:text-blue-700 font-medium text-sm">
-                    Editar
-                  </button>
+                  <div className="flex space-x-2">
+                    <button className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+                      Editar
+                    </button>
+                    <button 
+                      onClick={() => deleteProduct(product.id)}
+                      className="text-red-600 hover:text-red-700 font-medium text-sm"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -311,17 +333,32 @@ function Products() {
                 {/* Imagen */}
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    URL de la Imagen
+                    Imagen del Producto
                   </label>
-                  <input
-                    type="url"
-                    name="image"
-                    value={formData.image}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    placeholder="https://ejemplo.com/imagen.jpg"
-                    required
-                  />
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Subir archivo</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      />
+                    </div>
+                    <div className="text-center text-slate-400 text-sm">O</div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">URL de imagen</label>
+                      <input
+                        type="url"
+                        name="image"
+                        value={formData.imageFile ? '' : formData.image}
+                        onChange={handleInputChange}
+                        disabled={formData.imageFile}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-slate-100"
+                        placeholder="https://ejemplo.com/imagen.jpg"
+                      />
+                    </div>
+                  </div>
                   {formData.image && (
                     <div className="mt-3">
                       <p className="text-sm text-slate-600 mb-2">Vista previa:</p>
