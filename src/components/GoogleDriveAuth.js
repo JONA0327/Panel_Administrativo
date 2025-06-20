@@ -1,30 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { gapi } from 'gapi-script';
+
+const CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+const API_KEY = process.env.REACT_APP_GOOGLE_API_KEY;
 
 function GoogleDriveAuth({ onAuthenticated }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [folderPath, setFolderPath] = useState('');
   const [showFolderOptions, setShowFolderOptions] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const [token, setToken] = useState('');
+
+  useEffect(() => {
+    function start() {
+      gapi.client.init({
+        apiKey: API_KEY,
+        clientId: CLIENT_ID,
+        scope: 'https://www.googleapis.com/auth/drive.file',
+        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+      });
+    }
+    gapi.load('client:auth2', start);
+  }, []);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    
-    // Simulación de autenticación con Google
-    setTimeout(() => {
+    try {
+      const googleUser = await gapi.auth2.getAuthInstance().signIn();
       setIsAuthenticated(true);
-      setIsLoading(false);
       setShowFolderOptions(true);
+      setUserEmail(googleUser.getBasicProfile().getEmail());
+      setToken(googleUser.getAuthResponse().access_token);
       if (onAuthenticated) {
         onAuthenticated(true);
       }
-    }, 2000);
+    } catch (err) {
+      console.error('Google sign-in error', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleCreateFolder = () => {
-    // Simulación de creación de carpeta
-    const newFolderPath = '/MediPanel_Storage';
-    setFolderPath(newFolderPath);
-    alert(`Carpeta creada exitosamente: ${newFolderPath}`);
+  const handleCreateFolder = async () => {
+    try {
+      const response = await gapi.client.drive.files.create({
+        resource: {
+          name: 'MediPanel_Storage',
+          mimeType: 'application/vnd.google-apps.folder',
+        },
+        fields: 'id,name',
+      });
+      const folderId = response.result.id;
+      setFolderPath(`https://drive.google.com/drive/folders/${folderId}`);
+      alert(`Carpeta creada exitosamente: ${response.result.name}`);
+    } catch (err) {
+      console.error('Error al crear la carpeta', err);
+    }
   };
 
   const handleFolderPathSubmit = (e) => {
@@ -35,12 +67,23 @@ function GoogleDriveAuth({ onAuthenticated }) {
     }
   };
 
-  const handleSignOut = () => {
-    setIsAuthenticated(false);
-    setShowFolderOptions(false);
-    setFolderPath('');
-    if (onAuthenticated) {
-      onAuthenticated(false);
+  const handleSignOut = async () => {
+    try {
+      const auth2 = gapi.auth2.getAuthInstance();
+      if (auth2) {
+        await auth2.signOut();
+      }
+    } catch (err) {
+      console.error('Error al cerrar sesión', err);
+    } finally {
+      setIsAuthenticated(false);
+      setShowFolderOptions(false);
+      setFolderPath('');
+      setUserEmail('');
+      setToken('');
+      if (onAuthenticated) {
+        onAuthenticated(false);
+      }
     }
   };
 
@@ -94,7 +137,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
           </div>
           <div>
             <h3 className="text-lg font-semibold text-slate-800">Google Drive Conectado</h3>
-            <p className="text-sm text-slate-600">usuario@gmail.com</p>
+            <p className="text-sm text-slate-600">{userEmail}</p>
           </div>
         </div>
         <button
