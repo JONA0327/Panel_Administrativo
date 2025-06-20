@@ -18,6 +18,16 @@ It was bootstrapped using Create React App and styled with Tailwind CSS.
 The application will be available at `http://localhost:3000`.
 Tailwind CSS is preconfigured so you can immediately use its utility classes.
 
+### Google Drive
+
+Create a `.env` file based on `.env.example` and set your Google credentials to enable Drive integration:
+
+```
+REACT_APP_GOOGLE_CLIENT_ID=<client_id>
+REACT_APP_GOOGLE_API_KEY=<api_key>
+REACT_APP_GOOGLE_CLIENT_SECRET=<client_secret>
+```
+
 ## Server
 
 The backend API lives in the `server/` folder. To run it locally you need Node.js
