@@ -5,6 +5,7 @@ import Products from './components/Products';
 import Packages from './components/Packages';
 import Diseases from './components/Diseases';
 import Testimonials from './components/Testimonials';
+import Settings from './components/Settings';
 
 function App() {
   const [currentView, setCurrentView] = useState('Dashboard');
@@ -21,6 +22,8 @@ function App() {
         return <Diseases />;
       case 'Testimonios':
         return <Testimonials />;
+      case 'Configuración':
+        return <Settings />;
       default:
         return <Dashboard />;
     }
