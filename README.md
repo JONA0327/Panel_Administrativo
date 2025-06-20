@@ -10,7 +10,12 @@ It was bootstrapped using Create React App and styled with Tailwind CSS.
    ```bash
    npm install
    ```
-2. Start the development server
+2. Copy `.env.example` to `.env` and fill in your credentials
+   ```bash
+   cp .env.example .env
+   # edit .env and add real values
+   ```
+3. Start the development server
    ```bash
    npm start
    ```
@@ -20,13 +25,17 @@ Tailwind CSS is preconfigured so you can immediately use its utility classes.
 
 ### Google Drive
 
-Create a `.env` file based on `.env.example` and set your Google credentials to enable Drive integration:
+Copy `.env.example` to `.env` and set your credentials to enable Drive integration and the backend connection:
 
 ```
 REACT_APP_GOOGLE_CLIENT_ID=<client_id>
 REACT_APP_GOOGLE_API_KEY=<api_key>
 REACT_APP_GOOGLE_CLIENT_SECRET=<client_secret>
+MONGODB_URI=<mongodb_uri>
 ```
+
+If you modify `.env` while the development server is running, restart the React
+server so the new values are loaded.
 
 ## Server
 

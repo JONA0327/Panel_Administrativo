@@ -13,14 +13,24 @@ function GoogleDriveAuth({ onAuthenticated }) {
   const [token, setToken] = useState('');
 
   useEffect(() => {
+    if (!CLIENT_ID || !API_KEY) {
+      console.error(
+        'Missing Google API configuration. Please set REACT_APP_GOOGLE_CLIENT_ID and REACT_APP_GOOGLE_API_KEY in your .env file.'
+      );
+      return;
+    }
+
     function start() {
       gapi.client.init({
         apiKey: API_KEY,
         clientId: CLIENT_ID,
         scope: 'https://www.googleapis.com/auth/drive.file',
-        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+        discoveryDocs: [
+          'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+        ],
       });
     }
+
     gapi.load('client:auth2', start);
   }, []);
 
