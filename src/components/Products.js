@@ -165,12 +165,20 @@ function Products() {
         price: parseFloat(formData.price)
       })
     })
-      .then(res => res.json())
-      .then((product) => {
+      .then(async res => {
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(error.message || 'Error creating product');
+        }
+        return res.json();
+      })
+      .then(product => {
         setProducts(prev => [...prev, product]);
         closeModal();
       })
-      .catch(err => console.error(err));
+      .catch(err => {
+        console.error('Failed to create product:', err);
+      });
   };
 
   const deleteProduct = (productId) => {
