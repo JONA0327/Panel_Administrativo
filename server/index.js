@@ -11,6 +11,7 @@ require('dotenv').config();
 
 const Config = require('./DB/config');
 const Product = require('./DB/productos');
+const Package = require('./DB/packages');
 
 const app = express();
 app.use(cors());
@@ -326,6 +327,19 @@ function deleteLocalImage(fileId) {
   });
 }
 
+async function packageWithProducts(pkg) {
+  const products = await Promise.all(
+    pkg.productIds.map(async id => {
+      const p = await Product.findById(id);
+      if (!p) return null;
+      const fileId = p.fileId || extractFileId(p.image);
+      const localImage = await getLocalImage(fileId);
+      return { ...p.toObject(), localImage };
+    })
+  );
+  return { ...pkg.toObject(), products: products.filter(Boolean) };
+}
+
 // CRUD de productos
 
 app.get('/products', async (req, res) => {
@@ -487,6 +501,64 @@ app.delete('/products/:id', async (req, res) => {
   } catch (err) {
     console.error('Error deleting product:', err);
     res.status(400).json({ error: 'Failed to delete product', details: err.message });
+  }
+});
+
+// CRUD de paquetes
+
+app.get('/packages', async (req, res) => {
+  try {
+    const pkgs = await Package.find();
+    const populated = await Promise.all(pkgs.map(packageWithProducts));
+    res.json(populated);
+  } catch (err) {
+    console.error('Error fetching packages:', err);
+    res.status(500).json({ error: 'Failed to fetch packages' });
+  }
+});
+
+app.post('/packages', async (req, res) => {
+  try {
+    const { name, description, productIds = [] } = req.body;
+    const products = await Product.find({ _id: { $in: productIds } });
+    const totalPrice = products.reduce((s, p) => s + (p.price || 0), 0);
+    const pkg = new Package({ name, description, productIds, totalPrice });
+    await pkg.save();
+    const populated = await packageWithProducts(pkg);
+    res.status(201).json(populated);
+  } catch (err) {
+    console.error('Error creating package:', err);
+    res.status(400).json({ error: 'Failed to create package', details: err.message });
+  }
+});
+
+app.put('/packages/:id', async (req, res) => {
+  try {
+    const { name, description, productIds } = req.body;
+    const updateData = { name, description };
+    if (productIds) {
+      updateData.productIds = productIds;
+      const products = await Product.find({ _id: { $in: productIds } });
+      updateData.totalPrice = products.reduce((s, p) => s + (p.price || 0), 0);
+    }
+    const pkg = await Package.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    if (!pkg) return res.status(404).json({ error: 'Package not found' });
+    const populated = await packageWithProducts(pkg);
+    res.json(populated);
+  } catch (err) {
+    console.error('Error updating package:', err);
+    res.status(400).json({ error: 'Failed to update package', details: err.message });
+  }
+});
+
+app.delete('/packages/:id', async (req, res) => {
+  try {
+    const pkg = await Package.findByIdAndDelete(req.params.id);
+    if (!pkg) return res.status(404).json({ error: 'Package not found' });
+    res.json({ message: 'Package deleted' });
+  } catch (err) {
+    console.error('Error deleting package:', err);
+    res.status(400).json({ error: 'Failed to delete package', details: err.message });
   }
 });
 

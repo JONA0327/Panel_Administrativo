@@ -4,18 +4,8 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
 function Packages({ products }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [packages, setPackages] = useState([
-    {
-      id: 1,
-      name: 'Pack Inmunidad',
-      description: 'Fortalece tu sistema inmune con esta combinación perfecta',
-      products: [
-        { id: 1, name: 'Vitamina D3', price: 25.99, currency: 'USD', image: 'https://images.pexels.com/photos/3683074/pexels-photo-3683074.jpeg?auto=compress&cs=tinysrgb&w=300' },
-        { id: 2, name: 'Omega 3', price: 32.50, currency: 'USD', image: 'https://images.pexels.com/photos/3683081/pexels-photo-3683081.jpeg?auto=compress&cs=tinysrgb&w=300' }
-      ],
-      totalPrice: 58.49
-    }
-  ]);
+  const [packages, setPackages] = useState([]);
+  const [editingPackage, setEditingPackage] = useState(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -24,6 +14,13 @@ function Packages({ products }) {
   });
 
   const [availableProducts, setAvailableProducts] = useState([]);
+
+  useEffect(() => {
+    fetch(`${API_URL}/packages`)
+      .then(res => res.json())
+      .then(setPackages)
+      .catch(err => console.error('Failed to load packages', err));
+  }, []);
 
   useEffect(() => {
     if (!formData.name) {
@@ -50,11 +47,11 @@ function Packages({ products }) {
 
   const toggleProductSelection = (product) => {
     setFormData(prev => {
-      const isSelected = prev.selectedProducts.some(p => p.id === product.id);
+      const isSelected = prev.selectedProducts.some(p => (p._id || p.id) === (product._id || product.id));
       if (isSelected) {
         return {
           ...prev,
-          selectedProducts: prev.selectedProducts.filter(p => p.id !== product.id)
+          selectedProducts: prev.selectedProducts.filter(p => (p._id || p.id) !== (product._id || product.id))
         };
       } else {
         return {
@@ -71,25 +68,51 @@ function Packages({ products }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const newPackage = {
-      id: packages.length + 1,
+    const payload = {
       name: formData.name,
       description: formData.description,
-      products: formData.selectedProducts,
-      totalPrice: calculateTotalPrice()
+      productIds: formData.selectedProducts.map(p => p._id || p.id)
     };
-    setPackages(prev => [...prev, newPackage]);
-    closeModal();
+    if (editingPackage) {
+      fetch(`${API_URL}/packages/${editingPackage._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(res => res.json())
+        .then(updated => {
+          setPackages(prev => prev.map(p => (p._id === updated._id ? updated : p)));
+          closeModal();
+        })
+        .catch(err => console.error('Failed to update package', err));
+    } else {
+      fetch(`${API_URL}/packages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(res => res.json())
+        .then(pkg => {
+          setPackages(prev => [...prev, pkg]);
+          closeModal();
+        })
+        .catch(err => console.error('Failed to create package', err));
+    }
   };
 
   const deletePackage = (packageId) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este paquete?')) {
-      setPackages(prev => prev.filter(pkg => pkg.id !== packageId));
+      fetch(`${API_URL}/packages/${packageId}`, { method: 'DELETE' })
+        .then(() => {
+          setPackages(prev => prev.filter(pkg => pkg._id !== packageId));
+        })
+        .catch(err => console.error('Failed to delete package', err));
     }
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setEditingPackage(null);
     setFormData({
       name: '',
       description: '',
@@ -111,7 +134,11 @@ function Packages({ products }) {
             </p>
           </div>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setEditingPackage(null);
+              setFormData({ name: '', description: '', selectedProducts: [] });
+              setIsModalOpen(true);
+            }}
             className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 flex items-center space-x-2"
           >
             <span className="text-lg">➕</span>
@@ -122,12 +149,12 @@ function Packages({ products }) {
         {/* Packages Grid */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {packages.map((pkg) => (
-            <div key={pkg.id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div key={pkg._id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
               <div className="mb-4">
                 <div className="flex -space-x-2 mb-3">
                   {pkg.products.slice(0, 3).map((product, index) => (
                     <img
-                      key={product.id}
+                      key={product._id}
                       src={product.image}
                       alt={product.name}
                       className="w-12 h-12 rounded-full border-2 border-white object-cover"
@@ -144,7 +171,7 @@ function Packages({ products }) {
                 <p className="text-sm text-slate-600 mb-3">{pkg.description}</p>
                 <div className="space-y-1 mb-4">
                   {pkg.products.map((product) => (
-                    <div key={product.id} className="flex justify-between text-xs text-slate-500">
+                    <div key={product._id} className="flex justify-between text-xs text-slate-500">
                       <span>{product.name}</span>
                       <span>{product.currency} ${product.price}</span>
                     </div>
@@ -155,11 +182,22 @@ function Packages({ products }) {
                     USD ${pkg.totalPrice.toFixed(2)}
                   </span>
                   <div className="flex space-x-2">
-                    <button className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+                    <button
+                      onClick={() => {
+                        setEditingPackage(pkg);
+                        setFormData({
+                          name: pkg.name,
+                          description: pkg.description,
+                          selectedProducts: pkg.products
+                        });
+                        setIsModalOpen(true);
+                      }}
+                      className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                    >
                       Editar
                     </button>
                     <button 
-                      onClick={() => deletePackage(pkg.id)}
+                      onClick={() => deletePackage(pkg._id)}
                       className="text-red-600 hover:text-red-700 font-medium text-sm"
                     >
                       Eliminar
@@ -177,7 +215,7 @@ function Packages({ products }) {
             <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-slate-200">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold text-slate-800">Crear Nuevo Paquete</h2>
+                  <h2 className="text-2xl font-bold text-slate-800">{editingPackage ? 'Editar Paquete' : 'Crear Nuevo Paquete'}</h2>
                   <button
                     onClick={closeModal}
                     className="text-slate-400 hover:text-slate-600 text-2xl"
@@ -228,9 +266,9 @@ function Packages({ products }) {
                   <div className="grid gap-3 max-h-60 overflow-y-auto">
                     {availableProducts.map((product) => (
                       <div
-                        key={product.id}
+                        key={product._id}
                         className={`p-4 border rounded-xl cursor-pointer transition-all ${
-                          formData.selectedProducts.some(p => p.id === product.id)
+                          formData.selectedProducts.some(p => (p._id || p.id) === (product._id || product.id))
                             ? 'border-green-500 bg-green-50'
                             : 'border-slate-300 hover:border-slate-400'
                         }`}
@@ -249,11 +287,11 @@ function Packages({ products }) {
                           <div className="text-right">
                             <p className="font-semibold text-slate-800">{product.currency} ${product.price}</p>
                             <div className={`w-5 h-5 rounded-full border-2 ${
-                              formData.selectedProducts.some(p => p.id === product.id)
+                              formData.selectedProducts.some(p => (p._id || p.id) === (product._id || product.id))
                                 ? 'bg-green-500 border-green-500'
                                 : 'border-slate-300'
                             }`}>
-                              {formData.selectedProducts.some(p => p.id === product.id) && (
+                              {formData.selectedProducts.some(p => (p._id || p.id) === (product._id || product.id)) && (
                                 <div className="w-full h-full flex items-center justify-center">
                                   <span className="text-white text-xs">✓</span>
                                 </div>
@@ -295,7 +333,7 @@ function Packages({ products }) {
                     disabled={formData.selectedProducts.length === 0}
                     className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Crear Paquete
+                    {editingPackage ? 'Guardar Cambios' : 'Crear Paquete'}
                   </button>
                 </div>
               </form>
