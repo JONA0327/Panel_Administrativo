@@ -397,29 +397,38 @@ app.put('/products/:id', async (req, res) => {
     const existing = await Product.findById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Product not found' });
 
+    const allowedFields = ['suggestedInfo', 'keywords', 'price', 'currency'];
+    const updateData = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    }
+
     if (
       req.body.image &&
       typeof req.body.image === 'string' &&
       req.body.image.startsWith('data:')
     ) {
       try {
-        const oldFileId = existing.fileId || extractFileId(existing.image);
-        if (oldFileId) {
-          req.body.image = await updateImageOnDrive(oldFileId, req.body.image);
-          req.body.fileId = oldFileId;
-        } else {
-          const parentId = req.body.subfolderId || existing.subfolderId || driveFolderId;
-          const uploaded = await uploadImage(req.body.image, parentId);
-          req.body.image = uploaded.url;
-          req.body.fileId = uploaded.fileId;
+        if (existing.fileId) {
+          await deleteImageFromDrive(existing.fileId);
         }
+        const parentId = req.body.subfolderId || existing.subfolderId || driveFolderId;
+        const uploaded = await uploadImage(req.body.image, parentId);
+        updateData.image = uploaded.url;
+        updateData.fileId = uploaded.fileId;
       } catch (err) {
         console.error('Error updating image:', err);
         return res.status(400).json({ error: err.message });
       }
     }
 
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true }
+    );
     await getLocalImage(product.fileId || extractFileId(product.image));
     res.json(product);
   } catch (err) {
