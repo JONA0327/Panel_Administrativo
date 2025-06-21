@@ -30,12 +30,16 @@ Copy `.env.example` to `.env` and set your credentials to enable Drive integrati
 ```
 REACT_APP_GOOGLE_CLIENT_ID=<client_id>
 REACT_APP_GOOGLE_API_KEY=<api_key>
+REACT_APP_API_URL=http://localhost:4000
 MONGODB_URI=<mongodb_uri>
 GOOGLE_SERVICE_ACCOUNT_PATH=<path_to_service_account_json>
 # Optional default folder where product images will be uploaded
 # If not provided, the folder can be configured at runtime from the UI
 GOOGLE_DRIVE_FOLDER_ID=<drive_folder_id>
 ```
+
+`REACT_APP_API_URL` configures the base URL for API requests. If omitted, the
+application defaults to `http://localhost:4000`.
 
 When a folder is chosen in the interface, its ID is sent to the backend using
 the `/config/drive-folder` endpoint so the server knows where to upload product

@@ -5,6 +5,7 @@ const gapi = window.gapi;
 
 const CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 const API_KEY = process.env.REACT_APP_GOOGLE_API_KEY;
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
 function GoogleDriveAuth({ onAuthenticated }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -44,7 +45,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
 
       if (!savedFolderId) {
         try {
-          const res = await fetch('http://localhost:4000/config/drive-folder');
+          const res = await fetch(`${API_URL}/config/drive-folder`);
           const data = await res.json();
           if (data.folderId) {
             savedFolderId = data.folderId;
@@ -111,7 +112,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
   };
 
   useEffect(() => {
-    fetch('http://localhost:4000/config/subfolders')
+    fetch(`${API_URL}/config/subfolders`)
       .then(res => res.json())
       .then(setSubfolders)
       .catch(err => console.error('Failed to fetch subfolders', err));
@@ -119,7 +120,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
 
   const shareWithServiceAccount = async (folderId) => {
     try {
-      const res = await fetch('http://localhost:4000/config/service-account');
+      const res = await fetch(`${API_URL}/config/service-account`);
       const data = await res.json();
       if (res.ok && data.email) {
         await gapi.client.drive.permissions.create({
@@ -155,7 +156,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
       localStorage.setItem('drive_folder_path', path);
       localStorage.setItem('drive_folder_id', folderId);
       try {
-        const res = await fetch('http://localhost:4000/config/drive-folder', {
+        const res = await fetch(`${API_URL}/config/drive-folder`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ folderId }),
@@ -180,7 +181,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
   const handleCreateSubfolder = async () => {
     if (!rootFolderId || !subfolderName.trim()) return;
     try {
-      const res = await fetch('http://localhost:4000/config/subfolders', {
+      const res = await fetch(`${API_URL}/config/subfolders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: subfolderName.trim() })
@@ -210,7 +211,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
         setRootFolderId(idMatch[0]);
         localStorage.setItem('drive_folder_id', idMatch[0]);
         try {
-          const res = await fetch('http://localhost:4000/config/drive-folder', {
+          const res = await fetch(`${API_URL}/config/drive-folder`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ folderId: idMatch[0] }),
