@@ -250,6 +250,29 @@ async function deleteImageFromDrive(fileId) {
   }
 }
 
+async function updateImageOnDrive(fileId, dataUrl) {
+  if (!drive || !fileId) throw new Error('Google Drive not configured');
+
+  const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
+  if (!match) throw new Error('Invalid image data');
+  const mimeType = match[1];
+  const buffer = Buffer.from(match[2], 'base64');
+
+  const bufferStream = new Readable({
+    read() {
+      this.push(buffer);
+      this.push(null);
+    }
+  });
+
+  await drive.files.update({
+    fileId,
+    media: { mimeType, body: bufferStream }
+  });
+
+  return `https://drive.google.com/uc?id=${fileId}`;
+}
+
 // CRUD de productos
 
 app.get('/products', async (req, res) => {
@@ -320,12 +343,16 @@ app.put('/products/:id', async (req, res) => {
       req.body.image.startsWith('data:')
     ) {
       try {
-        const parentId = req.body.subfolderId || existing.subfolderId || driveFolderId;
-        const uploaded = await uploadImage(req.body.image, parentId);
-        req.body.image = uploaded.url;
-        req.body.fileId = uploaded.fileId;
         const oldFileId = existing.fileId || extractFileId(existing.image);
-        await deleteImageFromDrive(oldFileId);
+        if (oldFileId) {
+          req.body.image = await updateImageOnDrive(oldFileId, req.body.image);
+          req.body.fileId = oldFileId;
+        } else {
+          const parentId = req.body.subfolderId || existing.subfolderId || driveFolderId;
+          const uploaded = await uploadImage(req.body.image, parentId);
+          req.body.image = uploaded.url;
+          req.body.fileId = uploaded.fileId;
+        }
       } catch (err) {
         console.error('Error updating image:', err);
         return res.status(400).json({ error: err.message });
