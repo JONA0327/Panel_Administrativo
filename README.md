@@ -66,6 +66,20 @@ destination folder. If this variable is omitted, the folder can be selected
 through the application and sent to the backend using the new configuration
 endpoint.
 
+### Subfolders
+
+The configuration model now supports an optional `subfolders` array where each
+entry has the shape `{ name, folderId, link }`. Existing deployments will
+continue to work without changes because the field is optional. To start using
+subfolders simply update your `Config` document in MongoDB by adding the array
+of objects. For example:
+
+```bash
+db.configs.updateOne({}, { $set: { subfolders: [] } })
+```
+
+You can then insert objects into the array as needed.
+
 ```bash
 cd server
 npm install           # install server dependencies
