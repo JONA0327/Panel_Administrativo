@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 function Products() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [products, setProducts] = useState([]);
+  const [submitError, setSubmitError] = useState(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -159,33 +160,37 @@ function Products() {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    fetch('http://localhost:4000/products', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        ...formData,
-        price: parseFloat(formData.price)
-      })
+const handleSubmit = (e) => {
+  e.preventDefault();
+  setSubmitError(null); // Limpia cualquier error previo
+
+  fetch('http://localhost:4000/products', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...formData,                         // Incluye todos los campos del formulario
+      price: parseFloat(formData.price)   // Convierte price a número
     })
-      .then(async res => {
-        if (!res.ok) {
-          const error = await res.json().catch(() => ({}));
-          throw new Error(error.message || 'Error creating product');
-        }
-        return res.json();
-      })
-      .then(product => {
-        setProducts(prev => [...prev, product]);
-        closeModal();
-      })
-      .catch(err => {
-        console.error('Failed to create product:', err);
-      });
-  };
+  })
+    .then(async res => {
+      if (!res.ok) {
+        // Lee el JSON del error y construye un mensaje claro
+        const payload = await res.json().catch(() => ({}));
+        const msg = payload.error || payload.details || payload.message || 'Error al crear producto';
+        throw new Error(msg);
+      }
+      return res.json();
+    })
+    .then(product => {
+      // Almacena el nuevo producto y cierra el modal
+      setProducts(prev => [...prev, product]);
+      closeModal();
+    })
+    .catch(err => {
+      console.error('Failed to create product:', err);
+      setSubmitError(err.message); // Muestra el mensaje devuelto por el backend
+    });
+};
 
   const deleteProduct = (productId) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
@@ -233,6 +238,9 @@ function Products() {
             <span>Crear Nuevo Producto</span>
           </button>
         </div>
+        {submitError && (
+          <div className="text-red-600 mb-4">{submitError}</div>
+        )}
 
         {/* Products Grid */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

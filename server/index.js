@@ -1,19 +1,21 @@
 // server/index.js
-
+const { Readable } = require('stream');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const fs = require('fs');
+const path = require('path');
 const { google } = require('googleapis');
 require('dotenv').config();
 
 const Config = require('./DB/config');
+const Product = require('./DB/productos');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// Load Google Drive credentials
+// Carga de credenciales de Google Drive
 const serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
 let driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID || null;
 let drive;
@@ -24,37 +26,49 @@ if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
     scopes: ['https://www.googleapis.com/auth/drive']
   });
   drive = google.drive({ version: 'v3', auth });
-
-  // Log Drive folder status on startup
-  if (driveFolderId) {
-    console.log(`✅ Google Drive configurado. Folder ID: ${driveFolderId}`);
-  } else {
-    console.warn(`⚠️ Google Drive configurado pero NO hay carpeta. Usa POST /config/drive-folder para establecerla.`);
-  }
 } else {
   console.warn('⚠️ No se encontró el archivo de credenciales de Google Drive. Revisa GOOGLE_SERVICE_ACCOUNT_PATH.');
 }
 
-// Connect to MongoDB
-const mongoUri = process.env.MONGODB_URI;
-mongoose.connect(mongoUri, {
+// Conexión a MongoDB y carga inicial de configuración
+mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-  .then(async () => {
-    console.log('✅ MongoDB connected');
-    const cfg = await Config.findOne();
-    if (cfg && cfg.driveFolderId) {
-      driveFolderId = cfg.driveFolderId;
-      console.log(`🗂️  Drive folder cargado desde DB. Folder ID: ${driveFolderId}`);
+.then(async () => {
+  console.log('✅ MongoDB connected');
+
+  // Carga desde la DB el driveFolderId si existe
+  const cfg = await Config.findOne();
+  if (cfg && cfg.driveFolderId) {
+    driveFolderId = cfg.driveFolderId;
+    console.log(`🗂️  Drive folder cargado desde DB. Folder ID: ${driveFolderId}`);
+  } else {
+    console.warn('⚠️ Google Drive configurado pero NO hay carpeta. Usa POST /config/drive-folder para establecerla.');
+  }
+
+  // Si tenemos drive y carpeta, compartimos la carpeta con la cuenta de servicio
+  if (drive && driveFolderId && serviceAccountPath) {
+    try {
+      const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+      const serviceEmail = creds.client_email;
+      await drive.permissions.create({
+        fileId: driveFolderId,
+        requestBody: {
+          role: 'writer',
+          type: 'user',
+          emailAddress: serviceEmail
+        }
+      });
+      console.log(`✅ Carpeta ${driveFolderId} compartida con ${serviceEmail} como Editor`);
+    } catch (err) {
+      console.warn('⚠️ No se pudo compartir la carpeta con la cuenta de servicio:', err.message);
     }
-  })
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+  }
+})
+.catch(err => console.error('❌ MongoDB connection error:', err));
 
-// Load Mongoose model
-const Product = require('./DB/productos');
-
-// Endpoint to configure Drive folder at runtime
+// Endpoint para configurar carpeta de Drive
 app.post('/config/drive-folder', async (req, res) => {
   const { folderId } = req.body;
   if (!folderId || typeof folderId !== 'string') {
@@ -70,50 +84,45 @@ app.post('/config/drive-folder', async (req, res) => {
     console.log(`🗂️  Drive folder actualizado. Nuevo Folder ID: ${driveFolderId}`);
     res.json({ message: 'Drive folder configured', folderId: driveFolderId });
   } catch (err) {
+    console.error('Error saving Drive folder config:', err);
     res.status(500).json({ error: 'Failed to save config' });
   }
 });
 
-// Retrieve current Drive folder ID
+// Obtener carpeta actual de Drive
 app.get('/config/drive-folder', (req, res) => {
   res.json({ folderId: driveFolderId });
 });
 
-// Simple helper to sanitize a string for use as a filename
-function sanitizeName(name) {
-  return (name || 'product')
-    .toString()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
-
-// Helper to upload base64 image to Drive
-async function uploadImage(dataUrl, filename = 'product') {
+// Función corregida para subir base64 a Drive usando Readable stream
+async function uploadImage(dataUrl) {
   if (!drive) throw new Error('Google Drive not configured');
+
   const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
   if (!match) throw new Error('Invalid image data');
   const mimeType = match[1];
-  const buffer = Buffer.from(match[2], 'base64');
+  const buffer   = Buffer.from(match[2], 'base64');
 
-  const safeName = sanitizeName(filename);
-  const extension = mimeType.split('/')[1] || 'img';
+  const bufferStream = new Readable({
+    read() {
+      this.push(buffer);
+      this.push(null);
+    }
+  });
+
   const fileMetadata = {
-    name: `${safeName}-${Date.now()}.${extension}`,
-    mimeType
+    name: `product-${Date.now()}`,
+    mimeType,
+    ...(driveFolderId ? { parents: [driveFolderId] } : {})
   };
-  if (driveFolderId) {
-    fileMetadata.parents = [driveFolderId];
-  }
 
   const response = await drive.files.create({
     requestBody: fileMetadata,
-    media: { mimeType, body: buffer },
+    media: { mimeType, body: bufferStream },
     fields: 'id'
   });
 
   const fileId = response.data.id;
-  // Make it publicly readable
   await drive.permissions.create({
     fileId,
     requestBody: { role: 'reader', type: 'anyone' }
@@ -122,40 +131,19 @@ async function uploadImage(dataUrl, filename = 'product') {
   return `https://drive.google.com/uc?id=${fileId}`;
 }
 
-// CRUD endpoints for products
+// CRUD de productos
 
-// Get all products
 app.get('/products', async (req, res) => {
   try {
     const products = await Product.find();
     res.json(products);
   } catch (err) {
+    console.error('Error fetching products:', err);
     res.status(500).json({ error: 'Failed to fetch products' });
   }
 });
 
-// Create a new product (with optional image upload)
 app.post('/products', async (req, res) => {
-  try {
-    if (req.body.image &&
-        typeof req.body.image === 'string' &&
-        req.body.image.startsWith('data:')) {
-      try {
-        req.body.image = await uploadImage(req.body.image, req.body.name);
-      } catch (err) {
-        return res.status(400).json({ error: 'Image upload failed', details: err.message });
-      }
-    }
-    const product = new Product(req.body);
-    await product.save();
-    res.status(201).json(product);
-  } catch (err) {
-    res.status(400).json({ error: 'Failed to create product', details: err.message });
-  }
-});
-
-// Update an existing product
-app.put('/products/:id', async (req, res) => {
   try {
     if (
       req.body.image &&
@@ -163,41 +151,43 @@ app.put('/products/:id', async (req, res) => {
       req.body.image.startsWith('data:')
     ) {
       try {
-        req.body.image = await uploadImage(req.body.image, req.body.name);
+        req.body.image = await uploadImage(req.body.image);
       } catch (err) {
-        return res
-          .status(400)
-          .json({ error: 'Image upload failed', details: err.message });
+        console.error('Error en uploadImage:', err);
+        return res.status(400).json({ error: err.message });
       }
     }
-
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-    if (!product) return res.status(404).json({ error: 'Product not found' });
-    res.json(product);
+    const product = new Product(req.body);
+    await product.save();
+    res.status(201).json(product);
   } catch (err) {
-    res
-      .status(400)
-      .json({ error: 'Failed to update product', details: err.message });
+    console.error('Error creating product:', err);
+    res.status(400).json({ error: 'Failed to create product', details: err.message });
   }
 });
 
-// Delete a product
+app.put('/products/:id', async (req, res) => {
+  try {
+    const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+    res.json(product);
+  } catch (err) {
+    console.error('Error updating product:', err);
+    res.status(400).json({ error: 'Failed to update product', details: err.message });
+  }
+});
+
 app.delete('/products/:id', async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
     if (!product) return res.status(404).json({ error: 'Product not found' });
     res.json({ message: 'Product deleted' });
   } catch (err) {
+    console.error('Error deleting product:', err);
     res.status(400).json({ error: 'Failed to delete product', details: err.message });
   }
 });
 
-// Start the server
+// Arrancar servidor
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
