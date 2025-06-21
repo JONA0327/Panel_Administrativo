@@ -14,6 +14,11 @@ const Product = require('./DB/productos');
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
+const imageCacheDir = path.join(__dirname, 'image_cache');
+if (!fs.existsSync(imageCacheDir)) {
+  fs.mkdirSync(imageCacheDir, { recursive: true });
+}
+app.use('/images', express.static(imageCacheDir));
 
 // Carga de credenciales de Google Drive
 const serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
@@ -273,12 +278,66 @@ async function updateImageOnDrive(fileId, dataUrl) {
   return `https://drive.google.com/uc?id=${fileId}`;
 }
 
+async function getLocalImage(fileId) {
+  if (!fileId) return null;
+  const existing = fs.readdirSync(imageCacheDir).find(f => f.startsWith(`${fileId}.`));
+  if (existing) {
+    return `/images/${existing}`;
+  }
+  if (!drive) return null;
+  try {
+    const meta = await drive.files.get({ fileId, fields: 'mimeType' });
+    const mime = meta.data.mimeType || '';
+    const extMap = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/gif': 'gif'
+    };
+    const ext = extMap[mime] || mime.split('/').pop() || 'bin';
+    const filePath = path.join(imageCacheDir, `${fileId}.${ext}`);
+    const driveRes = await drive.files.get(
+      { fileId, alt: 'media' },
+      { responseType: 'stream' }
+    );
+    await new Promise((resolve, reject) => {
+      const dest = fs.createWriteStream(filePath);
+      driveRes.data.on('error', reject).pipe(dest);
+      dest.on('finish', resolve).on('error', reject);
+    });
+    return `/images/${fileId}.${ext}`;
+  } catch (err) {
+    console.error('Error downloading image:', err.message);
+    return null;
+  }
+}
+
+function deleteLocalImage(fileId) {
+  if (!fileId) return;
+  fs.readdirSync(imageCacheDir).forEach(f => {
+    if (f.startsWith(`${fileId}.`)) {
+      try {
+        fs.unlinkSync(path.join(imageCacheDir, f));
+      } catch (err) {
+        console.error('Error deleting cached image:', err.message);
+      }
+    }
+  });
+}
+
 // CRUD de productos
 
 app.get('/products', async (req, res) => {
   try {
     const products = await Product.find();
-    res.json(products);
+    const withLocal = await Promise.all(
+      products.map(async p => {
+        const fileId = p.fileId || extractFileId(p.image);
+        const localImage = await getLocalImage(fileId);
+        return { ...p.toObject(), localImage };
+      })
+    );
+    res.json(withLocal);
   } catch (err) {
     console.error('Error fetching products:', err);
     res.status(500).json({ error: 'Failed to fetch products' });
@@ -325,6 +384,7 @@ app.post('/products', async (req, res) => {
     }
     const product = new Product(req.body);
     await product.save();
+    await getLocalImage(product.fileId || extractFileId(product.image));
     res.status(201).json(product);
   } catch (err) {
     console.error('Error creating product:', err);
@@ -360,6 +420,7 @@ app.put('/products/:id', async (req, res) => {
     }
 
     const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    await getLocalImage(product.fileId || extractFileId(product.image));
     res.json(product);
   } catch (err) {
     console.error('Error updating product:', err);
@@ -374,6 +435,7 @@ app.delete('/products/:id', async (req, res) => {
 
     const fileId = product.fileId || extractFileId(product.image);
     await deleteImageFromDrive(fileId);
+    deleteLocalImage(fileId);
 
     res.json({ message: 'Product deleted' });
   } catch (err) {
