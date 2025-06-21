@@ -6,7 +6,7 @@ const { google } = require('googleapis');
 require('dotenv').config();
 
 const serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
-const driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+let driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID || null;
 let drive;
 
 if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
@@ -28,6 +28,15 @@ mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
 
 
 const Product = require('./DB/productos');
+
+app.post('/config/drive-folder', (req, res) => {
+  const { folderId } = req.body;
+  if (!folderId || typeof folderId !== 'string') {
+    return res.status(400).json({ error: 'Folder ID required' });
+  }
+  driveFolderId = folderId;
+  res.json({ message: 'Drive folder configured' });
+});
 
 async function uploadImage(dataUrl) {
   if (!drive) throw new Error('Google Drive not configured');
