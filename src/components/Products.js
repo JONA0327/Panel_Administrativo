@@ -316,7 +316,7 @@ const handleSubmit = (e) => {
             <div key={product._id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
               <div className="mb-4">
                 <img
-                  src={product.image}
+                  src={product.localImage ? `${API_URL}${product.localImage}` : product.image}
                   alt={product.name}
                   className="w-full h-40 object-cover rounded-xl"
                 />
