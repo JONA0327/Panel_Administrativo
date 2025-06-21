@@ -155,13 +155,20 @@ function GoogleDriveAuth({ onAuthenticated }) {
       localStorage.setItem('drive_folder_path', path);
       localStorage.setItem('drive_folder_id', folderId);
       try {
-        await fetch('http://localhost:4000/config/drive-folder', {
+        const res = await fetch('http://localhost:4000/config/drive-folder', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ folderId }),
         });
+        if (!res.ok) {
+          const payload = await res.json().catch(() => ({}));
+          throw new Error(
+            payload.error || payload.message || 'Failed to store folder ID'
+          );
+        }
       } catch (err) {
         console.error('Failed to store folder ID', err);
+        alert('Error al configurar la carpeta en el servidor');
       }
       await shareWithServiceAccount(folderId);
       alert(`Carpeta creada exitosamente: ${response.result.name}`);
@@ -220,13 +227,20 @@ function GoogleDriveAuth({ onAuthenticated }) {
         setRootFolderId(idMatch[0]);
         localStorage.setItem('drive_folder_id', idMatch[0]);
         try {
-          await fetch('http://localhost:4000/config/drive-folder', {
+          const res = await fetch('http://localhost:4000/config/drive-folder', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ folderId: idMatch[0] }),
           });
+          if (!res.ok) {
+            const payload = await res.json().catch(() => ({}));
+            throw new Error(
+              payload.error || payload.message || 'Failed to store folder ID'
+            );
+          }
         } catch (err) {
           console.error('Failed to store folder ID', err);
+          alert('Error al configurar la carpeta en el servidor');
         }
         await shareWithServiceAccount(idMatch[0]);
       }

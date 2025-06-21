@@ -99,6 +99,10 @@ app.post('/config/drive-folder', async (req, res) => {
         console.log(`✅ Carpeta ${driveFolderId} compartida con ${serviceEmail} como Editor`);
       } catch (err) {
         console.warn('⚠️ No se pudo compartir la carpeta con la cuenta de servicio:', err.message);
+        return res.status(500).json({
+          error: 'Failed to share folder with service account',
+          details: err.message
+        });
       }
     }
 
