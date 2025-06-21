@@ -157,6 +157,20 @@ app.post('/products', async (req, res) => {
 // Update an existing product
 app.put('/products/:id', async (req, res) => {
   try {
+    if (
+      req.body.image &&
+      typeof req.body.image === 'string' &&
+      req.body.image.startsWith('data:')
+    ) {
+      try {
+        req.body.image = await uploadImage(req.body.image, req.body.name);
+      } catch (err) {
+        return res
+          .status(400)
+          .json({ error: 'Image upload failed', details: err.message });
+      }
+    }
+
     const product = await Product.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -165,7 +179,9 @@ app.put('/products/:id', async (req, res) => {
     if (!product) return res.status(404).json({ error: 'Product not found' });
     res.json(product);
   } catch (err) {
-    res.status(400).json({ error: 'Failed to update product', details: err.message });
+    res
+      .status(400)
+      .json({ error: 'Failed to update product', details: err.message });
   }
 });
 
