@@ -9,6 +9,9 @@ function Products() {
   const [submitError, setSubmitError] = useState(null);
   const [subfolders, setSubfolders] = useState([]);
 
+  // Product to show in the description modal
+  const [infoProduct, setInfoProduct] = useState(null);
+
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -187,6 +190,14 @@ function Products() {
     setCurrentKeyword('');
   };
 
+  const openInfoModal = (product) => {
+    setInfoProduct(product);
+  };
+
+  const closeInfoModal = () => {
+    setInfoProduct(null);
+  };
+
 const handleSubmit = (e) => {
   e.preventDefault();
   setSubmitError(null); // Limpia cualquier error previo
@@ -313,7 +324,11 @@ const handleSubmit = (e) => {
         {/* Products Grid */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {products.map((product) => (
-            <div key={product._id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div
+              key={product._id}
+              className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+              onClick={() => openInfoModal(product)}
+            >
               <div className="mb-4">
                 <img
                   src={product.localImage ? `${API_URL}${product.localImage}` : product.image}
@@ -328,7 +343,6 @@ const handleSubmit = (e) => {
                     {product.category}
                   </span>
                 </div>
-                <p className="text-sm text-slate-600">{product.suggestedInfo}</p>
                 <div className="flex flex-wrap gap-1">
                   {Array.isArray(product.keywords)
                     ? product.keywords.map((keyword, index) => (
@@ -350,13 +364,19 @@ const handleSubmit = (e) => {
                   </span>
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => openEditModal(product)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditModal(product);
+                      }}
                       className="text-blue-600 hover:text-blue-700 font-medium text-sm"
                     >
                       Editar
                     </button>
-                    <button 
-                      onClick={() => deleteProduct(product._id)}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteProduct(product._id);
+                      }}
                       className="text-red-600 hover:text-red-700 font-medium text-sm"
                     >
                       Eliminar
@@ -813,6 +833,28 @@ const handleSubmit = (e) => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Description Modal */}
+        {infoProduct && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-slate-200">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-slate-800">{infoProduct.name}</h2>
+                  <button onClick={closeInfoModal} className="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
+                </div>
+              </div>
+              <div className="p-6 space-y-4">
+                <img
+                  src={infoProduct.localImage ? `${API_URL}${infoProduct.localImage}` : infoProduct.image}
+                  alt={infoProduct.name}
+                  className="w-full h-52 object-cover rounded-xl"
+                />
+                <p className="text-slate-600 whitespace-pre-line">{infoProduct.suggestedInfo}</p>
+              </div>
             </div>
           </div>
         )}
