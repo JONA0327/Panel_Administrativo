@@ -16,6 +16,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
   const [newFolderName, setNewFolderName] = useState('MediPanel_Storage');
   const [subfolderName, setSubfolderName] = useState('');
   const [rootFolderId, setRootFolderId] = useState('');
+  const [subfolders, setSubfolders] = useState([]);
   const tokenClient = useRef(null);
 
   useEffect(() => {
@@ -109,6 +110,13 @@ function GoogleDriveAuth({ onAuthenticated }) {
     tokenClient.current.requestAccessToken();
   };
 
+  useEffect(() => {
+    fetch('http://localhost:4000/config/subfolders')
+      .then(res => res.json())
+      .then(setSubfolders)
+      .catch(err => console.error('Failed to fetch subfolders', err));
+  }, []);
+
   const handleCreateFolder = async () => {
     try {
       const response = await gapi.client.drive.files.create({
@@ -150,7 +158,29 @@ function GoogleDriveAuth({ onAuthenticated }) {
         },
         fields: 'id,name',
       });
+
+      const folderId = response.result.id;
+      const link = `https://drive.google.com/drive/folders/${folderId}`;
+
+      try {
+        const res = await fetch('http://localhost:4000/config/subfolders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: subfolderName.trim(), folderId, link })
+        });
+        if (!res.ok) {
+          const payload = await res.json().catch(() => ({}));
+          throw new Error(payload.error || payload.message || 'Failed to save subfolder');
+        }
+        const saved = await res.json();
+        setSubfolders(prev => [...prev, saved]);
+      } catch (err) {
+        console.error('Failed to save subfolder', err);
+        alert('Error al guardar la subcarpeta');
+      }
+
       alert(`Subcarpeta creada: ${response.result.name}`);
+      setSubfolderName('');
     } catch (err) {
       console.error('Error al crear subcarpeta', err);
     }

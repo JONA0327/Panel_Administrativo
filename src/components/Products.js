@@ -4,6 +4,7 @@ function Products() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [products, setProducts] = useState([]);
   const [submitError, setSubmitError] = useState(null);
+  const [subfolders, setSubfolders] = useState([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -13,7 +14,8 @@ function Products() {
     price: '',
     currency: 'USD',
     image: '',
-    imageFile: null
+    imageFile: null,
+    subfolderId: ''
   });
 
   const [currentKeyword, setCurrentKeyword] = useState('');
@@ -106,6 +108,7 @@ function Products() {
       ? productCatalog[formData.category]
       : [];
   const currencies = ['USD', 'EUR', 'MXN', 'COP', 'ARS'];
+  const subfolderMap = Object.fromEntries(subfolders.map(sf => [sf.folderId, sf.name]));
 
   useEffect(() => {
     fetch('http://localhost:4000/products')
@@ -118,6 +121,11 @@ function Products() {
       })
       .then(data => setProducts(data))
       .catch(err => console.error(err));
+
+    fetch('http://localhost:4000/config/subfolders')
+      .then(res => res.json())
+      .then(setSubfolders)
+      .catch(err => console.error('Failed to load subfolders', err));
   }, []);
 
   const handleInputChange = (e) => {
@@ -169,7 +177,8 @@ const handleSubmit = (e) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       ...formData,                         // Incluye todos los campos del formulario
-      price: parseFloat(formData.price)   // Convierte price a número
+      price: parseFloat(formData.price),  // Convierte price a número
+      subfolderId: formData.subfolderId || undefined
     })
   })
     .then(async res => {
@@ -212,7 +221,8 @@ const handleSubmit = (e) => {
       price: '',
       currency: 'USD',
       image: '',
-      imageFile: null
+      imageFile: null,
+      subfolderId: ''
     });
     setCurrentKeyword('');
   };
@@ -273,6 +283,9 @@ const handleSubmit = (e) => {
                       ))
                     : null}
                 </div>
+                {product.subfolderId && (
+                  <p className="text-xs text-slate-500">📁 {subfolderMap[product.subfolderId] || product.subfolderId}</p>
+                )}
                 <div className="flex justify-between items-center pt-2">
                   <span className="text-xl font-bold text-slate-800">
                     {product.currency} ${product.price}
@@ -454,6 +467,26 @@ const handleSubmit = (e) => {
                     </select>
                   </div>
                 </div>
+
+                {/* Subcarpeta */}
+                {subfolders.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Subcarpeta destino
+                    </label>
+                    <select
+                      name="subfolderId"
+                      value={formData.subfolderId}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    >
+                      <option value="">Carpeta principal</option>
+                      {subfolders.map((sf) => (
+                        <option key={sf.folderId} value={sf.folderId}>{sf.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Imagen */}
                 <div>
