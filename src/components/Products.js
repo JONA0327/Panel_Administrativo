@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+
 function Products() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [products, setProducts] = useState([]);
@@ -111,7 +113,7 @@ function Products() {
   const subfolderMap = Object.fromEntries(subfolders.map(sf => [sf.folderId, sf.name]));
 
   useEffect(() => {
-    fetch('http://localhost:4000/products')
+    fetch(`${API_URL}/products`)
       .then(async res => {
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -122,7 +124,7 @@ function Products() {
       .then(data => setProducts(data))
       .catch(err => console.error(err));
 
-    fetch('http://localhost:4000/config/subfolders')
+    fetch(`${API_URL}/config/subfolders`)
       .then(res => res.json())
       .then(setSubfolders)
       .catch(err => console.error('Failed to load subfolders', err));
@@ -172,7 +174,7 @@ const handleSubmit = (e) => {
   e.preventDefault();
   setSubmitError(null); // Limpia cualquier error previo
 
-  fetch('http://localhost:4000/products', {
+  fetch(`${API_URL}/products`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -203,7 +205,7 @@ const handleSubmit = (e) => {
 
   const deleteProduct = (productId) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
-      fetch(`http://localhost:4000/products/${productId}`, { method: 'DELETE' })
+      fetch(`${API_URL}/products/${productId}`, { method: 'DELETE' })
         .then(() => {
           setProducts(prev => prev.filter(product => product._id !== productId));
         })
