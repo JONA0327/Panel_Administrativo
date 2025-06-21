@@ -6,3 +6,5 @@ build/
 .env.production.local
 .env
 .env.example
+# Ignorar credenciales de Google
+server/credenciales/*.json
