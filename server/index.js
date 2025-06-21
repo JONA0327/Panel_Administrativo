@@ -82,6 +82,26 @@ app.post('/config/drive-folder', async (req, res) => {
     );
     driveFolderId = cfg.driveFolderId;
     console.log(`🗂️  Drive folder actualizado. Nuevo Folder ID: ${driveFolderId}`);
+
+    // Compartir la carpeta con la cuenta de servicio inmediatamente
+    if (drive && serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+      try {
+        const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+        const serviceEmail = creds.client_email;
+        await drive.permissions.create({
+          fileId: driveFolderId,
+          requestBody: {
+            role: 'writer',
+            type: 'user',
+            emailAddress: serviceEmail
+          }
+        });
+        console.log(`✅ Carpeta ${driveFolderId} compartida con ${serviceEmail} como Editor`);
+      } catch (err) {
+        console.warn('⚠️ No se pudo compartir la carpeta con la cuenta de servicio:', err.message);
+      }
+    }
+
     res.json({ message: 'Drive folder configured', folderId: driveFolderId });
   } catch (err) {
     console.error('Error saving Drive folder config:', err);
