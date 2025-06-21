@@ -13,6 +13,9 @@ function GoogleDriveAuth({ onAuthenticated }) {
   const [showFolderOptions, setShowFolderOptions] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [token, setToken] = useState('');
+  const [newFolderName, setNewFolderName] = useState('MediPanel_Storage');
+  const [subfolderName, setSubfolderName] = useState('');
+  const [rootFolderId, setRootFolderId] = useState('');
   const tokenClient = useRef(null);
 
   useEffect(() => {
@@ -36,12 +39,21 @@ function GoogleDriveAuth({ onAuthenticated }) {
           const savedExp = parseInt(localStorage.getItem('drive_token_exp'), 10);
           const savedEmail = localStorage.getItem('drive_email');
           const savedFolderPath = localStorage.getItem('drive_folder_path');
+          const savedFolderId = localStorage.getItem('drive_folder_id');
 
           if (savedToken && savedExp && Date.now() < savedExp) {
             setToken(savedToken);
             gapi.client.setToken({ access_token: savedToken });
             if (savedEmail) setUserEmail(savedEmail);
-            if (savedFolderPath) setFolderPath(savedFolderPath);
+            if (savedFolderPath) {
+              setFolderPath(savedFolderPath);
+            }
+            if (savedFolderId) {
+              setRootFolderId(savedFolderId);
+            } else if (savedFolderPath) {
+              const idMatch = savedFolderPath.match(/[-\w]{25,}/);
+              if (idMatch) setRootFolderId(idMatch[0]);
+            }
             setIsAuthenticated(true);
             setShowFolderOptions(false);
             if (onAuthenticated) onAuthenticated(true);
@@ -90,7 +102,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
     try {
       const response = await gapi.client.drive.files.create({
         resource: {
-          name: 'MediPanel_Storage',
+          name: newFolderName || 'MediPanel_Storage',
           mimeType: 'application/vnd.google-apps.folder',
         },
         fields: 'id,name',
@@ -98,10 +110,38 @@ function GoogleDriveAuth({ onAuthenticated }) {
       const folderId = response.result.id;
       const path = `https://drive.google.com/drive/folders/${folderId}`;
       setFolderPath(path);
+      setRootFolderId(folderId);
       localStorage.setItem('drive_folder_path', path);
+      localStorage.setItem('drive_folder_id', folderId);
+      try {
+        await fetch('http://localhost:4000/config/drive-folder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ folderId }),
+        });
+      } catch (err) {
+        console.error('Failed to store folder ID', err);
+      }
       alert(`Carpeta creada exitosamente: ${response.result.name}`);
     } catch (err) {
       console.error('Error al crear la carpeta', err);
+    }
+  };
+
+  const handleCreateSubfolder = async () => {
+    if (!rootFolderId || !subfolderName.trim()) return;
+    try {
+      const response = await gapi.client.drive.files.create({
+        resource: {
+          name: subfolderName,
+          mimeType: 'application/vnd.google-apps.folder',
+          parents: [rootFolderId],
+        },
+        fields: 'id,name',
+      });
+      alert(`Subcarpeta creada: ${response.result.name}`);
+    } catch (err) {
+      console.error('Error al crear subcarpeta', err);
     }
   };
 
@@ -113,6 +153,8 @@ function GoogleDriveAuth({ onAuthenticated }) {
       localStorage.setItem('drive_folder_path', trimmed);
       const idMatch = trimmed.match(/[-\w]{25,}/);
       if (idMatch) {
+        setRootFolderId(idMatch[0]);
+        localStorage.setItem('drive_folder_id', idMatch[0]);
         try {
           await fetch('http://localhost:4000/config/drive-folder', {
             method: 'POST',
@@ -139,10 +181,12 @@ function GoogleDriveAuth({ onAuthenticated }) {
     localStorage.removeItem('drive_token_exp');
     localStorage.removeItem('drive_email');
     localStorage.removeItem('drive_folder_path');
+    localStorage.removeItem('drive_folder_id');
 
     setIsAuthenticated(false);
     setShowFolderOptions(false);
     setFolderPath('');
+    setRootFolderId('');
     setUserEmail('');
     setToken('');
     if (onAuthenticated) {
@@ -236,15 +280,50 @@ function GoogleDriveAuth({ onAuthenticated }) {
                 >
                   Usar esta carpeta
                 </button>
+              </div>
+            </form>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Nombre de la carpeta principal
+                </label>
+                <input
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="MediPanel_Storage"
+                />
                 <button
                   type="button"
                   onClick={handleCreateFolder}
-                  className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors"
+                  className="mt-2 w-full px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors"
                 >
-                  Crear nueva carpeta
+                  Crear carpeta principal
                 </button>
               </div>
-            </form>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Nombre de la subcarpeta
+                </label>
+                <input
+                  type="text"
+                  value={subfolderName}
+                  onChange={(e) => setSubfolderName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="Subcarpeta"
+                />
+                <button
+                  type="button"
+                  onClick={handleCreateSubfolder}
+                  className="mt-2 w-full px-4 py-2 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 transition-colors"
+                >
+                  Crear subcarpeta
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
