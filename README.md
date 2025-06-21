@@ -52,6 +52,12 @@ service account defined by `GOOGLE_SERVICE_ACCOUNT_PATH`. A message similar to:
 
 will appear in the server logs confirming the folder is ready to use.
 
+Make sure the Google account that creates the Drive folder grants **edit**
+permission to the service account either manually or from the front‑end when
+selecting the folder. If the service account is not shared on the folder,
+backend requests to create subfolders or upload images will fail with `File not
+found` errors.
+
 If you modify `.env` while the development server is running, restart the React
 server so the new values are loaded.
 
