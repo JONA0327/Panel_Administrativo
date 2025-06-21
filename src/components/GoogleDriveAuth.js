@@ -45,8 +45,6 @@ function GoogleDriveAuth({ onAuthenticated }) {
             setIsAuthenticated(true);
             setShowFolderOptions(false);
             if (onAuthenticated) onAuthenticated(true);
-          } else if (tokenClient.current) {
-            tokenClient.current.requestAccessToken({ prompt: '' });
           }
         });
     }
