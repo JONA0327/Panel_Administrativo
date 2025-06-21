@@ -117,6 +117,28 @@ function GoogleDriveAuth({ onAuthenticated }) {
       .catch(err => console.error('Failed to fetch subfolders', err));
   }, []);
 
+  const shareWithServiceAccount = async (folderId) => {
+    try {
+      const res = await fetch('http://localhost:4000/config/service-account');
+      const data = await res.json();
+      if (res.ok && data.email) {
+        await gapi.client.drive.permissions.create({
+          fileId: folderId,
+          resource: {
+            role: 'writer',
+            type: 'user',
+            emailAddress: data.email
+          }
+        });
+      } else {
+        throw new Error('Service account email unavailable');
+      }
+    } catch (err) {
+      console.error('Failed to share folder with service account', err);
+      alert('Error al compartir la carpeta con la cuenta de servicio');
+    }
+  };
+
   const handleCreateFolder = async () => {
     try {
       const response = await gapi.client.drive.files.create({
@@ -141,6 +163,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
       } catch (err) {
         console.error('Failed to store folder ID', err);
       }
+      await shareWithServiceAccount(folderId);
       alert(`Carpeta creada exitosamente: ${response.result.name}`);
     } catch (err) {
       console.error('Error al crear la carpeta', err);
@@ -205,6 +228,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
         } catch (err) {
           console.error('Failed to store folder ID', err);
         }
+        await shareWithServiceAccount(idMatch[0]);
       }
       alert(`Carpeta configurada: ${trimmed}`);
       setShowFolderOptions(false);

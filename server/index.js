@@ -114,6 +114,20 @@ app.get('/config/drive-folder', (req, res) => {
   res.json({ folderId: driveFolderId });
 });
 
+// Obtener el email de la cuenta de servicio
+app.get('/config/service-account', (req, res) => {
+  if (!serviceAccountPath || !fs.existsSync(serviceAccountPath)) {
+    return res.status(404).json({ error: 'Service account not configured' });
+  }
+  try {
+    const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+    return res.json({ email: creds.client_email || null });
+  } catch (err) {
+    console.error('Error reading service account credentials:', err);
+    return res.status(500).json({ error: 'Failed to read service account' });
+  }
+});
+
 // Crear subcarpeta en la carpeta principal de Drive
 app.post('/config/subfolders', async (req, res) => {
   const { name } = req.body;
