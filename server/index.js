@@ -241,6 +241,15 @@ function extractFileId(url) {
   return match ? match[1] : null;
 }
 
+async function deleteImageFromDrive(fileId) {
+  if (!drive || !fileId) return;
+  try {
+    await drive.files.delete({ fileId });
+  } catch (err) {
+    console.error('Error deleting image from Drive:', err.message);
+  }
+}
+
 // CRUD de productos
 
 app.get('/products', async (req, res) => {
@@ -302,8 +311,28 @@ app.post('/products', async (req, res) => {
 
 app.put('/products/:id', async (req, res) => {
   try {
+    const existing = await Product.findById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Product not found' });
+
+    if (
+      req.body.image &&
+      typeof req.body.image === 'string' &&
+      req.body.image.startsWith('data:')
+    ) {
+      try {
+        const parentId = req.body.subfolderId || existing.subfolderId || driveFolderId;
+        const uploaded = await uploadImage(req.body.image, parentId);
+        req.body.image = uploaded.url;
+        req.body.fileId = uploaded.fileId;
+        const oldFileId = existing.fileId || extractFileId(existing.image);
+        await deleteImageFromDrive(oldFileId);
+      } catch (err) {
+        console.error('Error updating image:', err);
+        return res.status(400).json({ error: err.message });
+      }
+    }
+
     const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!product) return res.status(404).json({ error: 'Product not found' });
     res.json(product);
   } catch (err) {
     console.error('Error updating product:', err);
@@ -315,6 +344,10 @@ app.delete('/products/:id', async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
     if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    const fileId = product.fileId || extractFileId(product.image);
+    await deleteImageFromDrive(fileId);
+
     res.json({ message: 'Product deleted' });
   } catch (err) {
     console.error('Error deleting product:', err);
