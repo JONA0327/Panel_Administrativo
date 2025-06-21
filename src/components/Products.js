@@ -29,7 +29,7 @@ function Products() {
   const productCatalog = {
     '4Life Transfer Factor': [
       'TF Plus Tri-Factor Formula',
-      'TF Regular Tri-Factor',
+      'TF Avanzado Tri-Factor',
       'TF RioVida Tri-Factor',
       'TF BCV – Cardio',
       'TF Belle Vie',
