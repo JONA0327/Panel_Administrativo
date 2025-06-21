@@ -24,12 +24,31 @@ function GoogleDriveAuth({ onAuthenticated }) {
     }
 
     function start() {
-      gapi.client.init({
-        apiKey: API_KEY,
-        discoveryDocs: [
-          'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-        ],
-      });
+      gapi.client
+        .init({
+          apiKey: API_KEY,
+          discoveryDocs: [
+            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+          ],
+        })
+        .then(() => {
+          const savedToken = localStorage.getItem('drive_token');
+          const savedExp = parseInt(localStorage.getItem('drive_token_exp'), 10);
+          const savedEmail = localStorage.getItem('drive_email');
+          const savedFolderPath = localStorage.getItem('drive_folder_path');
+
+          if (savedToken && savedExp && Date.now() < savedExp) {
+            setToken(savedToken);
+            gapi.client.setToken({ access_token: savedToken });
+            if (savedEmail) setUserEmail(savedEmail);
+            if (savedFolderPath) setFolderPath(savedFolderPath);
+            setIsAuthenticated(true);
+            setShowFolderOptions(false);
+            if (onAuthenticated) onAuthenticated(true);
+          } else if (tokenClient.current) {
+            tokenClient.current.requestAccessToken({ prompt: '' });
+          }
+        });
     }
 
     gapi.load('client', start);
@@ -40,6 +59,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
         'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
       callback: async (tokenResponse) => {
         const accessToken = tokenResponse.access_token;
+        const expiration = Date.now() + tokenResponse.expires_in * 1000;
         setToken(accessToken);
         gapi.client.setToken({ access_token: accessToken });
         try {
@@ -47,9 +67,12 @@ function GoogleDriveAuth({ onAuthenticated }) {
             path: 'https://www.googleapis.com/oauth2/v2/userinfo',
           });
           setUserEmail(userInfo.result.email);
+          localStorage.setItem('drive_email', userInfo.result.email);
         } catch (err) {
           console.error('Failed to fetch user info', err);
         }
+        localStorage.setItem('drive_token', accessToken);
+        localStorage.setItem('drive_token_exp', expiration.toString());
         setIsAuthenticated(true);
         setShowFolderOptions(true);
         if (onAuthenticated) onAuthenticated(true);
@@ -73,7 +96,9 @@ function GoogleDriveAuth({ onAuthenticated }) {
         fields: 'id,name',
       });
       const folderId = response.result.id;
-      setFolderPath(`https://drive.google.com/drive/folders/${folderId}`);
+      const path = `https://drive.google.com/drive/folders/${folderId}`;
+      setFolderPath(path);
+      localStorage.setItem('drive_folder_path', path);
       alert(`Carpeta creada exitosamente: ${response.result.name}`);
     } catch (err) {
       console.error('Error al crear la carpeta', err);
@@ -83,7 +108,10 @@ function GoogleDriveAuth({ onAuthenticated }) {
   const handleFolderPathSubmit = (e) => {
     e.preventDefault();
     if (folderPath.trim()) {
-      alert(`Carpeta configurada: ${folderPath}`);
+      const trimmed = folderPath.trim();
+      setFolderPath(trimmed);
+      localStorage.setItem('drive_folder_path', trimmed);
+      alert(`Carpeta configurada: ${trimmed}`);
       setShowFolderOptions(false);
     }
   };
@@ -94,6 +122,11 @@ function GoogleDriveAuth({ onAuthenticated }) {
         gapi.client.setToken('');
       });
     }
+
+    localStorage.removeItem('drive_token');
+    localStorage.removeItem('drive_token_exp');
+    localStorage.removeItem('drive_email');
+    localStorage.removeItem('drive_folder_path');
 
     setIsAuthenticated(false);
     setShowFolderOptions(false);
