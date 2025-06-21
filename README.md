@@ -39,7 +39,9 @@ GOOGLE_DRIVE_FOLDER_ID=<drive_folder_id>
 
 When a folder is chosen in the interface, its ID is sent to the backend using
 the `/config/drive-folder` endpoint so the server knows where to upload product
-images. This allows the destination to be changed without updating `.env`.
+images. The chosen ID is stored in MongoDB so it persists across server restarts.
+You can query the current value using the `GET /config/drive-folder` endpoint.
+This allows the destination to be changed without updating `.env`.
 
 If you modify `.env` while the development server is running, restart the React
 server so the new values are loaded.

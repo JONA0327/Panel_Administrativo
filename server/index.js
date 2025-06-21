@@ -7,6 +7,8 @@ const fs = require('fs');
 const { google } = require('googleapis');
 require('dotenv').config();
 
+const Config = require('./DB/config');
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -39,21 +41,42 @@ mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-  .then(() => console.log('✅ MongoDB connected'))
+  .then(async () => {
+    console.log('✅ MongoDB connected');
+    const cfg = await Config.findOne();
+    if (cfg && cfg.driveFolderId) {
+      driveFolderId = cfg.driveFolderId;
+      console.log(`🗂️  Drive folder cargado desde DB. Folder ID: ${driveFolderId}`);
+    }
+  })
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // Load Mongoose model
 const Product = require('./DB/productos');
 
 // Endpoint to configure Drive folder at runtime
-app.post('/config/drive-folder', (req, res) => {
+app.post('/config/drive-folder', async (req, res) => {
   const { folderId } = req.body;
   if (!folderId || typeof folderId !== 'string') {
     return res.status(400).json({ error: 'Folder ID required' });
   }
-  driveFolderId = folderId;
-  console.log(`🗂️  Drive folder actualizado. Nuevo Folder ID: ${driveFolderId}`);
-  res.json({ message: 'Drive folder configured', folderId });
+  try {
+    const cfg = await Config.findOneAndUpdate(
+      {},
+      { driveFolderId: folderId },
+      { new: true, upsert: true }
+    );
+    driveFolderId = cfg.driveFolderId;
+    console.log(`🗂️  Drive folder actualizado. Nuevo Folder ID: ${driveFolderId}`);
+    res.json({ message: 'Drive folder configured', folderId: driveFolderId });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save config' });
+  }
+});
+
+// Retrieve current Drive folder ID
+app.get('/config/drive-folder', (req, res) => {
+  res.json({ folderId: driveFolderId });
 });
 
 // Helper to upload base64 image to Drive
