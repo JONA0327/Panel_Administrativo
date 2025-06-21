@@ -17,7 +17,93 @@ function Products() {
 
   const [currentKeyword, setCurrentKeyword] = useState('');
 
-  const categories = ['Vitaminas', 'Suplementos', 'Minerales', 'Proteínas', 'Antioxidantes', 'Probióticos'];
+  const productCatalog = {
+    '4Life Transfer Factor': [
+      'TF Plus Tri-Factor Formula',
+      'TF Regular Tri-Factor',
+      'TF RioVida Tri-Factor',
+      'TF BCV – Cardio',
+      'TF Belle Vie',
+      'TF Classic',
+      'TF Collagen',
+      'TF FeelRite',
+      'TF Glucoach',
+      'TF Glutamine Prime',
+      'TF Immune Boost',
+      'TF Immune Spray',
+      'TF KBU',
+      'TF Lung',
+      'TF MalePro',
+      'TF Masticable',
+      'TF Metabolite',
+      'TF Recall',
+      'TF Reflexion',
+      'TF Renewal',
+      'TF Rite Start Kids & Teens',
+      'TF Rite Start Men',
+      'TF Rite Start Women',
+      'TF Sleep Rite',
+      'TF Vista'
+    ],
+    '4Life Elements': ['Gold Factor', 'Zinc Factor'],
+    '4Life Transform': [
+      'TF Burn',
+      'TF Man',
+      'TF Woman',
+      'Pro TF Proteína Hidrolizada',
+      'TF PreZoom',
+      'TF ReNuvo',
+      'TF ShapeRite'
+    ],
+    'Enummi Cuidado Personal': [
+      'Enummi Cuidado Personal',
+      'Enummi Desodorante',
+      'Enummi Jabón de Manos',
+      'Enummi Loción Corporal',
+      'Enummi Pasta Dental'
+    ],
+    'Äkwä Cuidado de Piel': [
+      'äKwä Fist Wave',
+      'äKwä Lavapure',
+      'äKwä Glacier Glow',
+      'äKwä Precious Pool',
+      'äKwä Royal Bath',
+      'äKwä Ripple Refine',
+      'äKwä RainBurst',
+      'äKwä Life C'
+    ],
+    'Bienestar Fundamental': [
+      'Ácidos Grasos Esenciales',
+      'BioGenistein Ultra',
+      'Cal Mag Complex',
+      'Calostro Fortificado',
+      'Fibro AMJ',
+      'Flex 4Life',
+      'Gurmar',
+      'Inner Sun',
+      'Life C',
+      'Multiplex',
+      'Músculo Skeletal',
+      'PBGS+ Antioxidante',
+      'Stress Formula'
+    ],
+    'Energía & Nutrición': ['Energy Go Stix', 'Nutra Start Blue'],
+    'Digest 4Life': [
+      'Alove Vera',
+      'Enzimas Digestivas',
+      'Fibre System Plus',
+      'Phytolax',
+      'Pre/O Biotics',
+      'Super Detox',
+      'Tea 4Life'
+    ]
+  };
+
+  const categories = Object.keys(productCatalog);
+  const productOptions =
+    formData.category && productCatalog[formData.category]
+      ? productCatalog[formData.category]
+      : [];
   const currencies = ['USD', 'EUR', 'MXN', 'COP', 'ARS'];
 
   useEffect(() => {
@@ -206,12 +292,25 @@ function Products() {
                   <input
                     type="text"
                     name="name"
+                    list="product-name-list"
                     value={formData.name}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="Ej: Vitamina D3"
                     required
                   />
+                  <datalist id="product-name-list">
+                    {productOptions.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                  {productOptions.length > 0 && (
+                    <ul className="mt-2 list-disc list-inside text-sm text-slate-600">
+                      {productOptions.map((name) => (
+                        <li key={name}>{name}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
 
                 {/* Categoría */}
