@@ -180,39 +180,22 @@ function GoogleDriveAuth({ onAuthenticated }) {
   const handleCreateSubfolder = async () => {
     if (!rootFolderId || !subfolderName.trim()) return;
     try {
-      const response = await gapi.client.drive.files.create({
-        resource: {
-          name: subfolderName,
-          mimeType: 'application/vnd.google-apps.folder',
-          parents: [rootFolderId],
-        },
-        fields: 'id,name',
+      const res = await fetch('http://localhost:4000/config/subfolders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: subfolderName.trim() })
       });
-
-      const folderId = response.result.id;
-      const link = `https://drive.google.com/drive/folders/${folderId}`;
-
-      try {
-        const res = await fetch('http://localhost:4000/config/subfolders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: subfolderName.trim(), folderId, link })
-        });
-        if (!res.ok) {
-          const payload = await res.json().catch(() => ({}));
-          throw new Error(payload.error || payload.message || 'Failed to save subfolder');
-        }
-        const saved = await res.json();
-        setSubfolders(prev => [...prev, saved]);
-      } catch (err) {
-        console.error('Failed to save subfolder', err);
-        alert('Error al guardar la subcarpeta');
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload.error || payload.message || 'Failed to create subfolder');
       }
-
-      alert(`Subcarpeta creada: ${response.result.name}`);
+      const saved = await res.json();
+      setSubfolders(prev => [...prev, saved]);
+      alert(`Subcarpeta creada en el servidor: ${saved.name}`);
       setSubfolderName('');
     } catch (err) {
       console.error('Error al crear subcarpeta', err);
+      alert('Error al crear la subcarpeta en el servidor');
     }
   };
 
