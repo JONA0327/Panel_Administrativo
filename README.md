@@ -78,17 +78,18 @@ endpoint.
 
 ### Subfolders
 
-The configuration model now supports an optional `subfolders` array where each
-entry has the shape `{ name, folderId, link }`. Existing deployments will
-continue to work without changes because the field is optional. To start using
-subfolders simply update your `Config` document in MongoDB by adding the array
-of objects. For example:
+The configuration model includes an optional `subfolders` array. New subfolders
+are created through the `/config/subfolders` endpoint which only requires the
+`name`; the server generates the `folderId` and `link` and stores them in this
+array. Existing deployments will continue to work without changes. To start
+using subfolders simply ensure your `Config` document has the array present. For
+example:
 
 ```bash
 db.configs.updateOne({}, { $set: { subfolders: [] } })
 ```
-
-You can then insert objects into the array as needed.
+Subfolders should then be created from the UI or by calling the endpoint; the
+server will handle storing the generated ID and link.
 
 ```bash
 cd server
