@@ -114,6 +114,70 @@ app.get('/config/drive-folder', (req, res) => {
   res.json({ folderId: driveFolderId });
 });
 
+// Crear subcarpeta en la carpeta principal de Drive
+app.post('/config/subfolders', async (req, res) => {
+  const { name } = req.body;
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'Name required' });
+  }
+  if (!drive || !driveFolderId) {
+    return res.status(500).json({ error: 'Drive not configured' });
+  }
+  try {
+    const fileMetadata = {
+      name: name.trim(),
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: [driveFolderId]
+    };
+    const response = await drive.files.create({
+      requestBody: fileMetadata,
+      fields: 'id'
+    });
+    const folderId = response.data.id;
+
+    // Compartir la subcarpeta con la cuenta de servicio
+    if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+      try {
+        const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+        const serviceEmail = creds.client_email;
+        await drive.permissions.create({
+          fileId: folderId,
+          requestBody: {
+            role: 'writer',
+            type: 'user',
+            emailAddress: serviceEmail
+          }
+        });
+      } catch (err) {
+        console.warn('⚠️ No se pudo compartir la subcarpeta con la cuenta de servicio:', err.message);
+      }
+    }
+
+    const link = `https://drive.google.com/drive/folders/${folderId}`;
+    await Config.findOneAndUpdate(
+      {},
+      { $push: { subfolders: { name: name.trim(), folderId, link } } },
+      { upsert: true }
+    );
+
+    res.status(201).json({ name: name.trim(), folderId, link });
+  } catch (err) {
+    console.error('Error creating subfolder:', err);
+    res.status(500).json({ error: 'Failed to create subfolder', details: err.message });
+  }
+});
+
+// Obtener subcarpetas guardadas
+app.get('/config/subfolders', async (req, res) => {
+  try {
+    const cfg = await Config.findOne();
+    res.json(cfg?.subfolders || []);
+  } catch (err) {
+    console.error('Error fetching subfolders:', err);
+    res.status(500).json({ error: 'Failed to fetch subfolders', details: err.message });
+  }
+});
+
 // Función corregida para subir base64 a Drive usando Readable stream
 async function uploadImage(dataUrl) {
   if (!drive) throw new Error('Google Drive not configured');
@@ -211,3 +275,5 @@ app.delete('/products/:id', async (req, res) => {
 // Arrancar servidor
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+module.exports = app;
