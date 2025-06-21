@@ -79,16 +79,27 @@ app.get('/config/drive-folder', (req, res) => {
   res.json({ folderId: driveFolderId });
 });
 
+// Simple helper to sanitize a string for use as a filename
+function sanitizeName(name) {
+  return (name || 'product')
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
 // Helper to upload base64 image to Drive
-async function uploadImage(dataUrl) {
+async function uploadImage(dataUrl, filename = 'product') {
   if (!drive) throw new Error('Google Drive not configured');
   const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
   if (!match) throw new Error('Invalid image data');
   const mimeType = match[1];
   const buffer = Buffer.from(match[2], 'base64');
 
+  const safeName = sanitizeName(filename);
+  const extension = mimeType.split('/')[1] || 'img';
   const fileMetadata = {
-    name: `product-${Date.now()}`,
+    name: `${safeName}-${Date.now()}.${extension}`,
     mimeType
   };
   if (driveFolderId) {
@@ -130,7 +141,7 @@ app.post('/products', async (req, res) => {
         typeof req.body.image === 'string' &&
         req.body.image.startsWith('data:')) {
       try {
-        req.body.image = await uploadImage(req.body.image);
+        req.body.image = await uploadImage(req.body.image, req.body.name);
       } catch (err) {
         return res.status(400).json({ error: 'Image upload failed', details: err.message });
       }
