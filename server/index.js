@@ -1,11 +1,25 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const fs = require('fs');
+const { google } = require('googleapis');
 require('dotenv').config();
+
+const serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
+const driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+let drive;
+
+if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+  const auth = new google.auth.GoogleAuth({
+    keyFile: serviceAccountPath,
+    scopes: ['https://www.googleapis.com/auth/drive']
+  });
+  drive = google.drive({ version: 'v3', auth });
+}
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 const mongoUri = process.env.MONGODB_URI;
 mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -24,6 +38,34 @@ const productSchema = new mongoose.Schema({
 
 const Product = mongoose.model('Product', productSchema);
 
+async function uploadImage(dataUrl) {
+  if (!drive) throw new Error('Google Drive not configured');
+  const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
+  if (!match) throw new Error('Invalid image data');
+  const mimeType = match[1];
+  const buffer = Buffer.from(match[2], 'base64');
+
+  const fileMetadata = {
+    name: `product-${Date.now()}`,
+    mimeType,
+  };
+  if (driveFolderId) fileMetadata.parents = [driveFolderId];
+
+  const response = await drive.files.create({
+    requestBody: fileMetadata,
+    media: { mimeType, body: buffer },
+    fields: 'id'
+  });
+
+  const fileId = response.data.id;
+  await drive.permissions.create({
+    fileId,
+    requestBody: { role: 'reader', type: 'anyone' }
+  });
+
+  return `https://drive.google.com/uc?id=${fileId}`;
+}
+
 app.get('/products', async (req, res) => {
   try {
     const products = await Product.find();
@@ -35,6 +77,13 @@ app.get('/products', async (req, res) => {
 
 app.post('/products', async (req, res) => {
   try {
+    if (req.body.image && typeof req.body.image === 'string' && req.body.image.startsWith('data:')) {
+      try {
+        req.body.image = await uploadImage(req.body.image);
+      } catch (err) {
+        return res.status(400).json({ error: 'Image upload failed' });
+      }
+    }
     const product = new Product(req.body);
     await product.save();
     res.status(201).json(product);
