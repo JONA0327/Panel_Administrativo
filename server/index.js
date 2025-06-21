@@ -26,17 +26,8 @@ mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-const productSchema = new mongoose.Schema({
-  name: String,
-  category: String,
-  suggestedInfo: String,
-  keywords: [String],
-  price: Number,
-  currency: String,
-  image: String
-});
 
-const Product = mongoose.model('Product', productSchema);
+const Product = require('./DB/productos');
 
 async function uploadImage(dataUrl) {
   if (!drive) throw new Error('Google Drive not configured');
