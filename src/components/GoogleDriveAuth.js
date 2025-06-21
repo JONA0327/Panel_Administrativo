@@ -5,6 +5,7 @@ const gapi = window.gapi;
 
 const CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 const API_KEY = process.env.REACT_APP_GOOGLE_API_KEY;
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
 function GoogleDriveAuth({ onAuthenticated }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -112,7 +113,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
       const idMatch = trimmed.match(/[-\w]{25,}/);
       if (idMatch) {
         try {
-          await fetch('http://localhost:4000/config/drive-folder', {
+          await fetch(`${API_URL}/config/drive-folder`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ folderId: idMatch[0] }),
