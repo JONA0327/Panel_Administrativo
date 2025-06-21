@@ -98,3 +98,15 @@ npm run dev           # start with nodemon
 
 The server listens on port `4000` by default.
 
+### Serving product images
+
+Images uploaded to Google Drive can be retrieved through the new endpoint:
+
+```http
+GET /products/:id/image
+```
+
+It streams the file from Drive using the stored `fileId` (or extracting the ID
+from the `image` field if `fileId` is missing). The response includes the proper
+`Content-Type` header so it can be used directly as the `src` of an `<img>` tag.
+

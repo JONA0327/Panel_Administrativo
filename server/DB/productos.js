@@ -9,6 +9,7 @@ const productSchema = new mongoose.Schema({
   price: Number,
   currency: String,
   image: String,
+  fileId: String,
   subfolderId: String
 });
 
