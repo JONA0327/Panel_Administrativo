@@ -248,11 +248,16 @@ function Products() {
                 </div>
                 <p className="text-sm text-slate-600">{product.suggestedInfo}</p>
                 <div className="flex flex-wrap gap-1">
-                  {product.keywords.map((keyword, index) => (
-                    <span key={index} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-md">
-                      #{keyword}
-                    </span>
-                  ))}
+                  {Array.isArray(product.keywords)
+                    ? product.keywords.map((keyword, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-md"
+                        >
+                          #{keyword}
+                        </span>
+                      ))
+                    : null}
                 </div>
                 <div className="flex justify-between items-center pt-2">
                   <span className="text-xl font-bold text-slate-800">
