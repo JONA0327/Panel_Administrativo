@@ -108,7 +108,13 @@ function Products() {
 
   useEffect(() => {
     fetch('http://localhost:4000/products')
-      .then(res => res.json())
+      .then(async res => {
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || err.message || 'Failed to load products');
+        }
+        return res.json();
+      })
       .then(data => setProducts(data))
       .catch(err => console.error(err));
   }, []);
