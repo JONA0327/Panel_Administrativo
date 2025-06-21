@@ -43,6 +43,15 @@ images. The chosen ID is stored in MongoDB so it persists across server restarts
 You can query the current value using the `GET /config/drive-folder` endpoint.
 This allows the destination to be changed without updating `.env`.
 
+After configuring a new folder the backend automatically shares it with the
+service account defined by `GOOGLE_SERVICE_ACCOUNT_PATH`. A message similar to:
+
+```
+✅ Carpeta <id> compartida con <service_email> como Editor
+```
+
+will appear in the server logs confirming the folder is ready to use.
+
 If you modify `.env` while the development server is running, restart the React
 server so the new values are loaded.
 
