@@ -6,6 +6,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
+const axios = require('axios');
 require('dotenv').config();
 
 const Config = require('./DB/config');
@@ -340,6 +341,42 @@ app.get('/products', async (req, res) => {
     res.json(withLocal);
   } catch (err) {
     console.error('Error fetching products:', err);
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
+// Suggest products based on package title using DeepSeek or similar API
+app.post('/packages/suggested', async (req, res) => {
+  const { title } = req.body || {};
+  if (!title) {
+    return res.status(400).json({ error: 'Title required' });
+  }
+  let detected = [];
+  try {
+    const dsUrl = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/analyze';
+    const resp = await axios.post(
+      dsUrl,
+      { text: title },
+      { headers: { Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` } }
+    );
+    if (resp.data && Array.isArray(resp.data.keywords)) {
+      detected = resp.data.keywords.map(k => String(k).toLowerCase());
+    }
+  } catch (err) {
+    console.error('DeepSeek API error:', err.message);
+  }
+
+  try {
+    let products = await Product.find();
+    if (detected.length) {
+      const lowered = detected.map(k => k.toLowerCase());
+      products = products.filter(p =>
+        Array.isArray(p.keywords) && p.keywords.some(kw => lowered.includes(String(kw).toLowerCase()))
+      );
+    }
+    res.json(products);
+  } catch (err) {
+    console.error('Error suggesting products:', err);
     res.status(500).json({ error: 'Failed to fetch products' });
   }
 });

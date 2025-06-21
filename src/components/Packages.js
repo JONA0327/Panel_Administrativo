@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
 function Packages({ products }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,24 +23,22 @@ function Packages({ products }) {
     selectedProducts: []
   });
 
-  const availableProducts = [
-    {
-      id: 1,
-      name: 'Vitamina D3',
-      category: 'Vitaminas',
-      price: 25.99,
-      currency: 'USD',
-      image: 'https://images.pexels.com/photos/3683074/pexels-photo-3683074.jpeg?auto=compress&cs=tinysrgb&w=300'
-    },
-    {
-      id: 2,
-      name: 'Omega 3',
-      category: 'Suplementos',
-      price: 32.50,
-      currency: 'USD',
-      image: 'https://images.pexels.com/photos/3683081/pexels-photo-3683081.jpeg?auto=compress&cs=tinysrgb&w=300'
+  const [availableProducts, setAvailableProducts] = useState([]);
+
+  useEffect(() => {
+    if (!formData.name) {
+      setAvailableProducts([]);
+      return;
     }
-  ];
+    fetch(`${API_URL}/packages/suggested`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: formData.name })
+    })
+      .then(res => res.json())
+      .then(setAvailableProducts)
+      .catch(err => console.error('Failed to load suggested products', err));
+  }, [formData.name]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
