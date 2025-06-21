@@ -105,12 +105,24 @@ function GoogleDriveAuth({ onAuthenticated }) {
     }
   };
 
-  const handleFolderPathSubmit = (e) => {
+  const handleFolderPathSubmit = async (e) => {
     e.preventDefault();
     if (folderPath.trim()) {
       const trimmed = folderPath.trim();
       setFolderPath(trimmed);
       localStorage.setItem('drive_folder_path', trimmed);
+      const idMatch = trimmed.match(/[-\w]{25,}/);
+      if (idMatch) {
+        try {
+          await fetch('http://localhost:4000/config/drive-folder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folderId: idMatch[0] }),
+          });
+        } catch (err) {
+          console.error('Failed to store folder ID', err);
+        }
+      }
       alert(`Carpeta configurada: ${trimmed}`);
       setShowFolderOptions(false);
     }
