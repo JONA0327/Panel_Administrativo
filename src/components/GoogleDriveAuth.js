@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { gapi } from 'gapi-script';
+import React, { useState, useEffect, useRef } from 'react';
+
+// gapi and google are loaded via script tags in index.html
+const gapi = window.gapi;
 
 const CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 const API_KEY = process.env.REACT_APP_GOOGLE_API_KEY;
@@ -11,6 +13,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
   const [showFolderOptions, setShowFolderOptions] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [token, setToken] = useState('');
+  const tokenClient = useRef(null);
 
   useEffect(() => {
     if (!CLIENT_ID || !API_KEY) {
@@ -23,33 +26,41 @@ function GoogleDriveAuth({ onAuthenticated }) {
     function start() {
       gapi.client.init({
         apiKey: API_KEY,
-        clientId: CLIENT_ID,
-        scope: 'https://www.googleapis.com/auth/drive.file',
         discoveryDocs: [
           'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
         ],
       });
     }
 
-    gapi.load('client:auth2', start);
+    gapi.load('client', start);
+
+    tokenClient.current = window.google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope:
+        'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
+      callback: async (tokenResponse) => {
+        const accessToken = tokenResponse.access_token;
+        setToken(accessToken);
+        gapi.client.setToken({ access_token: accessToken });
+        try {
+          const userInfo = await gapi.client.request({
+            path: 'https://www.googleapis.com/oauth2/v2/userinfo',
+          });
+          setUserEmail(userInfo.result.email);
+        } catch (err) {
+          console.error('Failed to fetch user info', err);
+        }
+        setIsAuthenticated(true);
+        setShowFolderOptions(true);
+        if (onAuthenticated) onAuthenticated(true);
+        setIsLoading(false);
+      },
+    });
   }, []);
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = () => {
     setIsLoading(true);
-    try {
-      const googleUser = await gapi.auth2.getAuthInstance().signIn();
-      setIsAuthenticated(true);
-      setShowFolderOptions(true);
-      setUserEmail(googleUser.getBasicProfile().getEmail());
-      setToken(googleUser.getAuthResponse().access_token);
-      if (onAuthenticated) {
-        onAuthenticated(true);
-      }
-    } catch (err) {
-      console.error('Google sign-in error', err);
-    } finally {
-      setIsLoading(false);
-    }
+    tokenClient.current.requestAccessToken();
   };
 
   const handleCreateFolder = async () => {
@@ -77,23 +88,20 @@ function GoogleDriveAuth({ onAuthenticated }) {
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      const auth2 = gapi.auth2.getAuthInstance();
-      if (auth2) {
-        await auth2.signOut();
-      }
-    } catch (err) {
-      console.error('Error al cerrar sesión', err);
-    } finally {
-      setIsAuthenticated(false);
-      setShowFolderOptions(false);
-      setFolderPath('');
-      setUserEmail('');
-      setToken('');
-      if (onAuthenticated) {
-        onAuthenticated(false);
-      }
+  const handleSignOut = () => {
+    if (token) {
+      window.google.accounts.oauth2.revoke(token, () => {
+        gapi.client.setToken('');
+      });
+    }
+
+    setIsAuthenticated(false);
+    setShowFolderOptions(false);
+    setFolderPath('');
+    setUserEmail('');
+    setToken('');
+    if (onAuthenticated) {
+      onAuthenticated(false);
     }
   };
 
