@@ -4,6 +4,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
 function Products() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   const [products, setProducts] = useState([]);
   const [submitError, setSubmitError] = useState(null);
   const [subfolders, setSubfolders] = useState([]);
@@ -170,6 +171,22 @@ function Products() {
     }));
   };
 
+  const openEditModal = (product) => {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name || '',
+      category: product.category || '',
+      suggestedInfo: product.suggestedInfo || '',
+      keywords: Array.isArray(product.keywords) ? product.keywords : [],
+      price: product.price != null ? product.price : '',
+      currency: product.currency || 'USD',
+      image: product.image || '',
+      imageFile: null,
+      subfolderId: product.subfolderId || ''
+    });
+    setCurrentKeyword('');
+  };
+
 const handleSubmit = (e) => {
   e.preventDefault();
   setSubmitError(null); // Limpia cualquier error previo
@@ -203,6 +220,44 @@ const handleSubmit = (e) => {
     });
 };
 
+  const handleUpdate = (e) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+    setSubmitError(null);
+
+    const payload = {
+      suggestedInfo: formData.suggestedInfo,
+      keywords: formData.keywords,
+      price: parseFloat(formData.price),
+      currency: formData.currency,
+    };
+    if (formData.image && formData.image.startsWith('data:')) {
+      payload.image = formData.image;
+    }
+
+    fetch(`${API_URL}/products/${editingProduct._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(async res => {
+        if (!res.ok) {
+          const payload = await res.json().catch(() => ({}));
+          const msg = payload.error || payload.details || payload.message || 'Error al actualizar producto';
+          throw new Error(msg);
+        }
+        return res.json();
+      })
+      .then(updated => {
+        setProducts(prev => prev.map(p => (p._id === updated._id ? updated : p)));
+        closeModal();
+      })
+      .catch(err => {
+        console.error('Failed to update product:', err);
+        setSubmitError(err.message);
+      });
+  };
+
   const deleteProduct = (productId) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
       fetch(`${API_URL}/products/${productId}`, { method: 'DELETE' })
@@ -215,6 +270,7 @@ const handleSubmit = (e) => {
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setEditingProduct(null);
     setFormData({
       name: '',
       category: '',
@@ -293,7 +349,10 @@ const handleSubmit = (e) => {
                     {product.currency} ${product.price}
                   </span>
                   <div className="flex space-x-2">
-                    <button className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+                    <button
+                      onClick={() => openEditModal(product)}
+                      className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                    >
                       Editar
                     </button>
                     <button 
@@ -548,6 +607,209 @@ const handleSubmit = (e) => {
                     className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
                   >
                     Crear Producto
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {editingProduct && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-slate-200">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-slate-800">Editar Producto</h2>
+                  <button
+                    onClick={closeModal}
+                    className="text-slate-400 hover:text-slate-600 text-2xl"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleUpdate} className="p-6 space-y-6">
+                {/* Nombre */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Nombre del Producto
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    disabled
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl bg-slate-100"
+                  />
+                </div>
+
+                {/* Categoría */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Categoría
+                  </label>
+                  <input
+                    type="text"
+                    name="category"
+                    value={formData.category}
+                    disabled
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl bg-slate-100"
+                  />
+                </div>
+
+                {/* Información Sugerida */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Información Sugerida
+                  </label>
+                  <textarea
+                    name="suggestedInfo"
+                    value={formData.suggestedInfo}
+                    onChange={handleInputChange}
+                    rows="3"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                    placeholder="Describe los beneficios del producto..."
+                    required
+                  />
+                </div>
+
+                {/* Keywords */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Palabras Clave
+                  </label>
+                  <div className="flex space-x-2 mb-3">
+                    <input
+                      type="text"
+                      value={currentKeyword}
+                      onChange={(e) => setCurrentKeyword(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
+                      className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      placeholder="Agregar palabra clave"
+                    />
+                    <button
+                      type="button"
+                      onClick={addKeyword}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.keywords.map((keyword, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"
+                      >
+                        #{keyword}
+                        <button
+                          type="button"
+                          onClick={() => removeKeyword(keyword)}
+                          className="ml-2 text-blue-500 hover:text-blue-700"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Precio y Moneda */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Precio
+                    </label>
+                    <input
+                      type="number"
+                      name="price"
+                      value={formData.price}
+                      onChange={handleInputChange}
+                      step="0.01"
+                      min="0"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      placeholder="0.00"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Moneda
+                    </label>
+                    <select
+                      name="currency"
+                      value={formData.currency}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    >
+                      {currencies.map((currency) => (
+                        <option key={currency} value={currency}>
+                          {currency}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Imagen */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Imagen del Producto
+                  </label>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Subir archivo</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      />
+                    </div>
+                    <div className="text-center text-slate-400 text-sm">O</div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">URL de imagen</label>
+                      <input
+                        type="url"
+                        name="image"
+                        value={formData.imageFile ? '' : formData.image}
+                        onChange={handleInputChange}
+                        disabled={formData.imageFile}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-slate-100"
+                        placeholder="https://ejemplo.com/imagen.jpg"
+                      />
+                    </div>
+                  </div>
+                  {formData.image && (
+                    <div className="mt-3">
+                      <p className="text-sm text-slate-600 mb-2">Vista previa:</p>
+                      <img
+                        src={formData.image}
+                        alt="Vista previa"
+                        className="w-32 h-32 object-cover rounded-lg border border-slate-200"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Botones */}
+                <div className="flex space-x-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="flex-1 px-6 py-3 border border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    Guardar Cambios
                   </button>
                 </div>
               </form>
