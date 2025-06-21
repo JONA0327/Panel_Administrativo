@@ -179,7 +179,7 @@ app.get('/config/subfolders', async (req, res) => {
 });
 
 // Función corregida para subir base64 a Drive usando Readable stream
-async function uploadImage(dataUrl) {
+async function uploadImage(dataUrl, parentId = driveFolderId) {
   if (!drive) throw new Error('Google Drive not configured');
 
   const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
@@ -197,7 +197,7 @@ async function uploadImage(dataUrl) {
   const fileMetadata = {
     name: `product-${Date.now()}`,
     mimeType,
-    ...(driveFolderId ? { parents: [driveFolderId] } : {})
+    ...(parentId ? { parents: [parentId] } : {})
   };
 
   const response = await drive.files.create({
@@ -235,7 +235,8 @@ app.post('/products', async (req, res) => {
       req.body.image.startsWith('data:')
     ) {
       try {
-        req.body.image = await uploadImage(req.body.image);
+        const parentId = req.body.subfolderId || driveFolderId;
+        req.body.image = await uploadImage(req.body.image, parentId);
       } catch (err) {
         console.error('Error en uploadImage:', err);
         return res.status(400).json({ error: err.message });

@@ -8,7 +8,8 @@ const productSchema = new mongoose.Schema({
   keywords: [String],
   price: Number,
   currency: String,
-  image: String
+  image: String,
+  subfolderId: String
 });
 
 // El tercer parámetro fuerza el nombre de colección si lo necesitas:
