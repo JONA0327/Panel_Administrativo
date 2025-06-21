@@ -26,41 +26,52 @@ function GoogleDriveAuth({ onAuthenticated }) {
       return;
     }
 
-    function start() {
-      gapi.client
+    async function start() {
+      await gapi.client
         .init({
           apiKey: API_KEY,
           discoveryDocs: [
             'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
           ],
-        })
-        .then(() => {
-          const savedToken = localStorage.getItem('drive_token');
-          const savedExp = parseInt(localStorage.getItem('drive_token_exp'), 10);
-          const savedEmail = localStorage.getItem('drive_email');
-          const savedFolderPath = localStorage.getItem('drive_folder_path');
-          const savedFolderId = localStorage.getItem('drive_folder_id');
-
-          if (savedToken && savedExp && Date.now() < savedExp) {
-            setToken(savedToken);
-            gapi.client.setToken({ access_token: savedToken });
-            if (savedEmail) setUserEmail(savedEmail);
-            if (savedFolderPath) {
-              setFolderPath(savedFolderPath);
-            }
-            if (savedFolderId) {
-              setRootFolderId(savedFolderId);
-            } else if (savedFolderPath) {
-              const idMatch = savedFolderPath.match(/[-\w]{25,}/);
-              if (idMatch) setRootFolderId(idMatch[0]);
-            }
-            setIsAuthenticated(true);
-            setShowFolderOptions(false);
-            if (onAuthenticated) onAuthenticated(true);
-          } else if (tokenClient.current) {
-            tokenClient.current.requestAccessToken({ prompt: '' });
-          }
         });
+
+      const savedToken = localStorage.getItem('drive_token');
+      const savedExp = parseInt(localStorage.getItem('drive_token_exp'), 10);
+      const savedEmail = localStorage.getItem('drive_email');
+      let savedFolderPath = localStorage.getItem('drive_folder_path');
+      let savedFolderId = localStorage.getItem('drive_folder_id');
+
+      if (!savedFolderId) {
+        try {
+          const res = await fetch('http://localhost:4000/config/drive-folder');
+          const data = await res.json();
+          if (data.folderId) {
+            savedFolderId = data.folderId;
+            savedFolderPath = `https://drive.google.com/drive/folders/${data.folderId}`;
+            localStorage.setItem('drive_folder_id', savedFolderId);
+            localStorage.setItem('drive_folder_path', savedFolderPath);
+          }
+        } catch (err) {
+          console.error('Failed to load folder ID from server', err);
+        }
+      }
+
+      if (savedToken && savedExp && Date.now() < savedExp) {
+        setToken(savedToken);
+        gapi.client.setToken({ access_token: savedToken });
+        if (savedEmail) setUserEmail(savedEmail);
+        if (savedFolderPath) {
+          setFolderPath(savedFolderPath);
+        }
+        if (savedFolderId) {
+          setRootFolderId(savedFolderId);
+        }
+        setIsAuthenticated(true);
+        setShowFolderOptions(false);
+        if (onAuthenticated) onAuthenticated(true);
+      } else if (tokenClient.current) {
+        tokenClient.current.requestAccessToken({ prompt: '' });
+      }
     }
 
     gapi.load('client', start);
