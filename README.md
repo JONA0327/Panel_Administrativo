@@ -30,7 +30,6 @@ Copy `.env.example` to `.env` and set your credentials to enable Drive integrati
 ```
 REACT_APP_GOOGLE_CLIENT_ID=<client_id>
 REACT_APP_GOOGLE_API_KEY=<api_key>
-REACT_APP_GOOGLE_CLIENT_SECRET=<client_secret>
 MONGODB_URI=<mongodb_uri>
 GOOGLE_SERVICE_ACCOUNT_PATH=<path_to_service_account_json>
 # Optional default folder where product images will be uploaded
