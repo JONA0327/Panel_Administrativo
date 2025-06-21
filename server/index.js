@@ -230,7 +230,15 @@ async function uploadImage(dataUrl, parentId = driveFolderId) {
     requestBody: { role: 'reader', type: 'anyone' }
   });
 
-  return `https://drive.google.com/uc?id=${fileId}`;
+  return {
+    url: `https://drive.google.com/uc?id=${fileId}`,
+    fileId
+  };
+}
+
+function extractFileId(url) {
+  const match = /id=([^&]+)/.exec(url || '');
+  return match ? match[1] : null;
 }
 
 // CRUD de productos
@@ -245,6 +253,27 @@ app.get('/products', async (req, res) => {
   }
 });
 
+app.get('/products/:id/image', async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    const fileId = product.fileId || extractFileId(product.image);
+    if (!fileId) return res.status(404).json({ error: 'Image not available' });
+    if (!drive) return res.status(500).json({ error: 'Drive not configured' });
+
+    const driveRes = await drive.files.get(
+      { fileId, alt: 'media' },
+      { responseType: 'stream' }
+    );
+    res.setHeader('Content-Type', driveRes.headers['content-type'] || 'application/octet-stream');
+    driveRes.data.pipe(res);
+  } catch (err) {
+    console.error('Error streaming image:', err);
+    res.status(500).json({ error: 'Failed to fetch image' });
+  }
+});
+
 app.post('/products', async (req, res) => {
   try {
     if (
@@ -254,7 +283,9 @@ app.post('/products', async (req, res) => {
     ) {
       try {
         const parentId = req.body.subfolderId || driveFolderId;
-        req.body.image = await uploadImage(req.body.image, parentId);
+        const uploaded = await uploadImage(req.body.image, parentId);
+        req.body.image = uploaded.url;
+        req.body.fileId = uploaded.fileId;
       } catch (err) {
         console.error('Error en uploadImage:', err);
         return res.status(400).json({ error: err.message });
