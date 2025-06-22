@@ -7,6 +7,7 @@ import Diseases from './components/Diseases';
 import Testimonials from './components/Testimonials';
 import Database from './components/Database';
 import Settings from './components/Settings';
+import Activities from './components/Activities';
 
 function App() {
   const [currentView, setCurrentView] = useState('Dashboard');
@@ -37,6 +38,7 @@ function App() {
             onAddProduct={openAddProduct}
             onAddPackage={openAddPackage}
             onAddTestimonial={openAddTestimonial}
+            onViewActivities={() => setCurrentView('Actividades')}
           />
         );
       case 'Productos':
@@ -47,6 +49,8 @@ function App() {
         return <Diseases />;
       case 'Testimonios':
         return <Testimonials ref={testimonialsRef} />;
+      case 'Actividades':
+        return <Activities />;
       case 'BD':
         return <Database />;
       case 'Configuración':

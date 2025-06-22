@@ -210,6 +210,17 @@ app.get('/activities', async (req, res) => {
   }
 });
 
+app.delete('/activities/:id', async (req, res) => {
+  try {
+    const act = await Activity.findByIdAndDelete(req.params.id);
+    if (!act) return res.status(404).json({ error: 'Activity not found' });
+    res.json({ message: 'Activity deleted' });
+  } catch (err) {
+    console.error('Error deleting activity:', err);
+    res.status(500).json({ error: 'Failed to delete activity' });
+  }
+});
+
 // Obtener datos de una colección específica
 app.get('/database/collections/:name/data', async (req, res) => {
   try {
