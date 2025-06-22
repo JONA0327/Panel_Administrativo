@@ -52,12 +52,14 @@ function Dashboard({ onAddProduct, onAddPackage, onAddTestimonial }) {
     }
   ];
 
-  const recentActivity = [
-    { action: 'Nuevo producto agregado', time: 'Hace 2 minutos', type: 'success' },
-    { action: 'Paquete actualizado', time: 'Hace 15 minutos', type: 'info' },
-    { action: 'Venta completada', time: 'Hace 1 hora', type: 'success' },
-    { action: 'Nuevo testimonio recibido', time: 'Hace 2 horas', type: 'success' },
-  ];
+  const [activities, setActivities] = useState([]);
+
+  useEffect(() => {
+    fetch(`${API_URL}/activities?limit=10`)
+      .then(res => res.json())
+      .then(setActivities)
+      .catch(err => console.error('Error fetching activities:', err));
+  }, []);
 
   return (
     <main className="flex-1 p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-y-auto min-h-screen">
@@ -100,16 +102,12 @@ function Dashboard({ onAddProduct, onAddPackage, onAddTestimonial }) {
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
             <h2 className="text-xl font-semibold text-slate-800 mb-6">Actividad Reciente</h2>
             <div className="space-y-4">
-              {recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-50/50 transition-colors">
-                  <div className={`w-2 h-2 rounded-full mt-2 ${
-                    activity.type === 'success' ? 'bg-emerald-500' :
-                    activity.type === 'info' ? 'bg-blue-500' :
-                    'bg-red-500'
-                  }`}></div>
+              {activities.map((activity) => (
+                <div key={activity._id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-50/50 transition-colors">
+                  <div className="w-2 h-2 rounded-full mt-2 bg-blue-500"></div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-800">{activity.action}</p>
-                    <p className="text-xs text-slate-500">{activity.time}</p>
+                    <p className="text-xs text-slate-500">{new Date(activity.createdAt).toLocaleString()}</p>
                   </div>
                 </div>
               ))}
