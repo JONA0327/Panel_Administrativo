@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
-function Products() {
+const Products = forwardRef((props, ref) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [products, setProducts] = useState([]);
@@ -176,6 +176,23 @@ function Products() {
     }));
   };
 
+  const openAddModal = () => {
+    setEditingProduct(null);
+    setFormData({
+      name: '',
+      category: '',
+      suggestedInfo: '',
+      keywords: [],
+      price: '',
+      currency: 'USD',
+      image: '',
+      imageFile: null,
+      subfolderId: ''
+    });
+    setCurrentKeyword('');
+    setIsModalOpen(true);
+  };
+
   const openEditModal = (product) => {
     setEditingProduct(product);
     setFormData({
@@ -199,6 +216,10 @@ function Products() {
   const closeInfoModal = () => {
     setInfoProduct(null);
   };
+
+  useImperativeHandle(ref, () => ({
+    openAddModal
+  }));
 
 const handleSubmit = (e) => {
   e.preventDefault();
@@ -312,7 +333,7 @@ const handleSubmit = (e) => {
             </p>
           </div>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={openAddModal}
             className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 flex items-center space-x-2"
           >
             <span className="text-lg">➕</span>
@@ -863,6 +884,6 @@ const handleSubmit = (e) => {
       </div>
     </main>
   );
-}
+});
 
 export default Products;

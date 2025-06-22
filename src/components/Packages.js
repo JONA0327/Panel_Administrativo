@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
-function Packages({ products }) {
+const Packages = forwardRef(({ products }, ref) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [packages, setPackages] = useState([]);
   const [editingPackage, setEditingPackage] = useState(null);
@@ -133,6 +133,16 @@ function Packages({ products }) {
     });
   };
 
+  const openAddModal = () => {
+    setEditingPackage(null);
+    setFormData({ name: '', description: '', selectedProducts: [] });
+    setIsModalOpen(true);
+  };
+
+  useImperativeHandle(ref, () => ({
+    openAddModal
+  }));
+
   return (
     <main className="flex-1 p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-y-auto min-h-screen">
       <div className="max-w-7xl mx-auto">
@@ -147,11 +157,7 @@ function Packages({ products }) {
             </p>
           </div>
           <button
-            onClick={() => {
-              setEditingPackage(null);
-              setFormData({ name: '', description: '', selectedProducts: [] });
-              setIsModalOpen(true);
-            }}
+            onClick={openAddModal}
             className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 flex items-center space-x-2"
           >
             <span className="text-lg">➕</span>
@@ -359,6 +365,6 @@ function Packages({ products }) {
       </div>
     </main>
   );
-}
+});
 
 export default Packages;
