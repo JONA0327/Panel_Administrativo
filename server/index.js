@@ -160,6 +160,23 @@ app.get('/database/stats', async (req, res) => {
   }
 });
 
+// Obtener conteos para el tablero principal
+app.get('/dashboard/stats', async (req, res) => {
+  try {
+    const [productCount, packageCount, diseaseCount, testimonialCount] =
+      await Promise.all([
+        Product.countDocuments(),
+        Package.countDocuments(),
+        Disease.countDocuments(),
+        Testimonial.countDocuments()
+      ]);
+    res.json({ productCount, packageCount, diseaseCount, testimonialCount });
+  } catch (err) {
+    console.error('Error fetching dashboard stats:', err);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
 // Obtener datos de una colección específica
 app.get('/database/collections/:name/data', async (req, res) => {
   try {

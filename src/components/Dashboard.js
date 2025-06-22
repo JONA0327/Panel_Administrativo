@@ -1,39 +1,55 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
 function Dashboard() {
+  const [stats, setStats] = useState({
+    productCount: 0,
+    packageCount: 0,
+    diseaseCount: 0,
+    testimonialCount: 0
+  });
+
+  useEffect(() => {
+    fetch(`${API_URL}/dashboard/stats`)
+      .then((res) => res.json())
+      .then((data) => setStats(data))
+      .catch((err) => console.error('Error fetching dashboard stats:', err));
+  }, []);
+
   const cards = [
-    { 
-      title: 'Productos', 
-      value: 128, 
-      change: '+12%',
+    {
+      title: 'Productos',
+      value: stats.productCount,
+      change: '',
       positive: true,
       icon: '📦',
       color: 'from-blue-500 to-cyan-500'
     },
-    { 
-      title: 'Paquetes', 
-      value: 45, 
-      change: '+18%',
+    {
+      title: 'Paquetes',
+      value: stats.packageCount,
+      change: '',
       positive: true,
       icon: '🎁',
       color: 'from-green-500 to-emerald-500'
     },
-    { 
-      title: 'Ventas', 
-      value: '$12,450', 
-      change: '+23%',
+    {
+      title: 'Índice de Enfermedades',
+      value: stats.diseaseCount,
+      change: '',
       positive: true,
-      icon: '💰',
+      icon: '🦠',
       color: 'from-purple-500 to-pink-500'
     },
-    { 
-      title: 'Testimonios', 
-      value: 89, 
-      change: '+15%',
+    {
+      title: 'Testimonios',
+      value: stats.testimonialCount,
+      change: '',
       positive: true,
       icon: '💬',
       color: 'from-orange-500 to-amber-500'
-    },
+    }
   ];
 
   const recentActivity = [
