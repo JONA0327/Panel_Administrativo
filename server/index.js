@@ -435,8 +435,10 @@ app.post('/products', async (req, res) => {
     }
     const product = new Product(req.body);
     await product.save();
-    await getLocalImage(product.fileId || extractFileId(product.image));
-    res.status(201).json(product);
+    const localImage = await getLocalImage(
+      product.fileId || extractFileId(product.image)
+    );
+    res.status(201).json({ ...product.toObject(), localImage });
   } catch (err) {
     console.error('Error creating product:', err);
     res.status(400).json({ error: 'Failed to create product', details: err.message });
@@ -480,8 +482,10 @@ app.put('/products/:id', async (req, res) => {
       updateData,
       { new: true }
     );
-    await getLocalImage(product.fileId || extractFileId(product.image));
-    res.json(product);
+    const localImage = await getLocalImage(
+      product.fileId || extractFileId(product.image)
+    );
+    res.json({ ...product.toObject(), localImage });
   } catch (err) {
     console.error('Error updating product:', err);
     res.status(400).json({ error: 'Failed to update product', details: err.message });
