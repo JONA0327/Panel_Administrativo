@@ -136,3 +136,7 @@ default upload folder. The folder ID may also be configured at runtime via the
 `POST /config/testimonials-folder` endpoint and queried with
 `GET /config/testimonials-folder`.
 
+The Settings page now lets you choose this testimonials folder just like the
+main images folder. Connect your Google Drive and specify both locations when
+configuring the integration.
+

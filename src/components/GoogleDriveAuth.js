@@ -18,6 +18,9 @@ function GoogleDriveAuth({ onAuthenticated }) {
   const [subfolderName, setSubfolderName] = useState('');
   const [rootFolderId, setRootFolderId] = useState('');
   const [subfolders, setSubfolders] = useState([]);
+  const [videoFolderPath, setVideoFolderPath] = useState('');
+  const [videoRootFolderId, setVideoRootFolderId] = useState('');
+  const [newVideoFolderName, setNewVideoFolderName] = useState('MediPanel_Testimonials');
   const tokenClient = useRef(null);
 
   useEffect(() => {
@@ -42,6 +45,8 @@ function GoogleDriveAuth({ onAuthenticated }) {
       const savedEmail = localStorage.getItem('drive_email');
       let savedFolderPath = localStorage.getItem('drive_folder_path');
       let savedFolderId = localStorage.getItem('drive_folder_id');
+      let savedVideoPath = localStorage.getItem('testimonials_folder_path');
+      let savedVideoId = localStorage.getItem('testimonials_folder_id');
 
       if (!savedFolderId) {
         try {
@@ -58,6 +63,21 @@ function GoogleDriveAuth({ onAuthenticated }) {
         }
       }
 
+      if (!savedVideoId) {
+        try {
+          const res = await fetch(`${API_URL}/config/testimonials-folder`);
+          const data = await res.json();
+          if (data.folderId) {
+            savedVideoId = data.folderId;
+            savedVideoPath = `https://drive.google.com/drive/folders/${data.folderId}`;
+            localStorage.setItem('testimonials_folder_id', savedVideoId);
+            localStorage.setItem('testimonials_folder_path', savedVideoPath);
+          }
+        } catch (err) {
+          console.error('Failed to load testimonials folder ID from server', err);
+        }
+      }
+
       if (savedToken && savedExp && Date.now() < savedExp) {
         setToken(savedToken);
         gapi.client.setToken({ access_token: savedToken });
@@ -67,6 +87,12 @@ function GoogleDriveAuth({ onAuthenticated }) {
         }
         if (savedFolderId) {
           setRootFolderId(savedFolderId);
+        }
+        if (savedVideoPath) {
+          setVideoFolderPath(savedVideoPath);
+        }
+        if (savedVideoId) {
+          setVideoRootFolderId(savedVideoId);
         }
         setIsAuthenticated(true);
         setShowFolderOptions(false);
@@ -178,6 +204,44 @@ function GoogleDriveAuth({ onAuthenticated }) {
     }
   };
 
+  const handleCreateVideoFolder = async () => {
+    try {
+      const response = await gapi.client.drive.files.create({
+        resource: {
+          name: newVideoFolderName || 'MediPanel_Testimonials',
+          mimeType: 'application/vnd.google-apps.folder',
+        },
+        fields: 'id,name',
+      });
+      const folderId = response.result.id;
+      const path = `https://drive.google.com/drive/folders/${folderId}`;
+      setVideoFolderPath(path);
+      setVideoRootFolderId(folderId);
+      localStorage.setItem('testimonials_folder_path', path);
+      localStorage.setItem('testimonials_folder_id', folderId);
+      try {
+        const res = await fetch(`${API_URL}/config/testimonials-folder`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ folderId }),
+        });
+        if (!res.ok) {
+          const payload = await res.json().catch(() => ({}));
+          throw new Error(
+            payload.error || payload.message || 'Failed to store folder ID'
+          );
+        }
+      } catch (err) {
+        console.error('Failed to store testimonials folder ID', err);
+        alert('Error al configurar la carpeta de testimonios en el servidor');
+      }
+      await shareWithServiceAccount(folderId);
+      alert(`Carpeta de testimonios creada exitosamente: ${response.result.name}`);
+    } catch (err) {
+      console.error('Error al crear la carpeta de testimonios', err);
+    }
+  };
+
   const handleCreateSubfolder = async () => {
     if (!rootFolderId || !subfolderName.trim()) return;
     try {
@@ -233,6 +297,39 @@ function GoogleDriveAuth({ onAuthenticated }) {
     }
   };
 
+  const handleVideoFolderPathSubmit = async (e) => {
+    e.preventDefault();
+    if (videoFolderPath.trim()) {
+      const trimmed = videoFolderPath.trim();
+      setVideoFolderPath(trimmed);
+      localStorage.setItem('testimonials_folder_path', trimmed);
+      const idMatch = trimmed.match(/[-\w]{25,}/);
+      if (idMatch) {
+        setVideoRootFolderId(idMatch[0]);
+        localStorage.setItem('testimonials_folder_id', idMatch[0]);
+        try {
+          const res = await fetch(`${API_URL}/config/testimonials-folder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folderId: idMatch[0] }),
+          });
+          if (!res.ok) {
+            const payload = await res.json().catch(() => ({}));
+            throw new Error(
+              payload.error || payload.message || 'Failed to store folder ID'
+            );
+          }
+        } catch (err) {
+          console.error('Failed to store testimonials folder ID', err);
+          alert('Error al configurar la carpeta de testimonios en el servidor');
+        }
+        await shareWithServiceAccount(idMatch[0]);
+      }
+      alert(`Carpeta de testimonios configurada: ${trimmed}`);
+      setShowFolderOptions(false);
+    }
+  };
+
   const handleSignOut = () => {
     if (token) {
       window.google.accounts.oauth2.revoke(token, () => {
@@ -245,11 +342,15 @@ function GoogleDriveAuth({ onAuthenticated }) {
     localStorage.removeItem('drive_email');
     localStorage.removeItem('drive_folder_path');
     localStorage.removeItem('drive_folder_id');
+    localStorage.removeItem('testimonials_folder_path');
+    localStorage.removeItem('testimonials_folder_id');
 
     setIsAuthenticated(false);
     setShowFolderOptions(false);
     setFolderPath('');
     setRootFolderId('');
+    setVideoFolderPath('');
+    setVideoRootFolderId('');
     setUserEmail('');
     setToken('');
     if (onAuthenticated) {
@@ -388,6 +489,55 @@ function GoogleDriveAuth({ onAuthenticated }) {
               </div>
             </div>
           </div>
+
+          <div className="bg-yellow-50 p-4 rounded-xl">
+            <h4 className="font-semibold text-slate-700 mb-3">Carpeta de Testimonios</h4>
+
+            <form onSubmit={handleVideoFolderPathSubmit} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Ruta de la carpeta
+                </label>
+                <input
+                  type="text"
+                  value={videoFolderPath}
+                  onChange={(e) => setVideoFolderPath(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="/MediPanel_Testimonials"
+                />
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
+                >
+                  Usar esta carpeta
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Nombre de la carpeta de testimonios
+                </label>
+                <input
+                  type="text"
+                  value={newVideoFolderName}
+                  onChange={(e) => setNewVideoFolderName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="MediPanel_Testimonials"
+                />
+                <button
+                  type="button"
+                  onClick={handleCreateVideoFolder}
+                  className="mt-2 w-full px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors"
+                >
+                  Crear carpeta de testimonios
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -398,6 +548,24 @@ function GoogleDriveAuth({ onAuthenticated }) {
             <div>
               <p className="font-medium text-slate-800">Carpeta configurada</p>
               <p className="text-sm text-slate-600">{folderPath}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowFolderOptions(true)}
+            className="mt-2 text-blue-600 hover:text-blue-700 font-medium text-sm"
+          >
+            Cambiar carpeta
+          </button>
+        </div>
+      )}
+
+      {videoFolderPath && !showFolderOptions && (
+        <div className="bg-green-50 p-4 rounded-xl mt-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-green-600 text-lg">📹</span>
+            <div>
+              <p className="font-medium text-slate-800">Carpeta de testimonios</p>
+              <p className="text-sm text-slate-600">{videoFolderPath}</p>
             </div>
           </div>
           <button
