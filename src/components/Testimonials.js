@@ -6,12 +6,14 @@ function Testimonials() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [testimonials, setTestimonials] = useState([]);
   const [products, setProducts] = useState([]);
+  const [subfolders, setSubfolders] = useState([]);
 
   const [formData, setFormData] = useState({
     name: '',
     associatedProducts: [],
     videoUrl: '',
-    videoFile: null
+    videoFile: null,
+    subfolderId: ''
   });
 
   const availableProducts = products;
@@ -27,6 +29,11 @@ function Testimonials() {
       .then(res => res.json())
       .then(setProducts)
       .catch(err => console.error('Failed to load products', err));
+
+    fetch(`${API_URL}/config/subfolders`)
+      .then(res => res.json())
+      .then(setSubfolders)
+      .catch(err => console.error('Failed to load subfolders', err));
   }, []);
 
   const handleInputChange = (e) => {
@@ -77,7 +84,8 @@ function Testimonials() {
       body: JSON.stringify({
         name: formData.name,
         associatedProducts: formData.associatedProducts,
-        video: formData.videoUrl
+        video: formData.videoUrl,
+        subfolderId: formData.subfolderId || undefined
       })
     })
       .then(res => res.json())
@@ -104,7 +112,8 @@ function Testimonials() {
       name: '',
       associatedProducts: [],
       videoUrl: '',
-      videoFile: null
+      videoFile: null,
+      subfolderId: ''
     });
   };
 
@@ -237,6 +246,26 @@ function Testimonials() {
                     ))}
                   </div>
                 </div>
+
+                {/* Subcarpeta */}
+                {subfolders.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Subcarpeta destino
+                    </label>
+                    <select
+                      name="subfolderId"
+                      value={formData.subfolderId}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    >
+                      <option value="">Carpeta principal</option>
+                      {subfolders.map((sf) => (
+                        <option key={sf.folderId} value={sf.folderId}>{sf.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Video */}
                 <div>
