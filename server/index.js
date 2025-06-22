@@ -435,7 +435,15 @@ Allowed keywords: ${allowedKeywords.join(', ')}
         p.keywords.some(kw => lowered.includes(kw.toLowerCase()))
       );
     }
-    return res.json(products);
+
+    const withLocal = await Promise.all(
+      products.map(async p => {
+        const fileId     = p.fileId || extractFileId(p.image);
+        const localImage = await getLocalImage(fileId);
+        return { ...p.toObject(), localImage };
+      })
+    );
+    res.json(withLocal);
   } catch (err) {
     console.error('Error suggesting products:', err);
     return res.status(500).json({ error: 'Failed to fetch products' });
