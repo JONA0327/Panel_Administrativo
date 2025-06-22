@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+
 function Diseases() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [diseases, setDiseases] = useState([
@@ -132,7 +134,7 @@ function Diseases() {
                     {disease.suggestedPackage.products.map((product) => (
                       <div key={product.id} className="flex items-center space-x-3 bg-white p-3 rounded-lg">
                         <img
-                          src={product.image || 'https://images.pexels.com/photos/3683074/pexels-photo-3683074.jpeg?auto=compress&cs=tinysrgb&w=300'}
+                          src={product.localImage ? `${API_URL}${product.localImage}` : (product.image || 'https://images.pexels.com/photos/3683074/pexels-photo-3683074.jpeg?auto=compress&cs=tinysrgb&w=300')}
                           alt={product.name}
                           className="w-10 h-10 rounded-lg object-cover"
                         />
@@ -244,7 +246,7 @@ function Diseases() {
                           {pkg.products.map((product) => (
                             <img
                               key={product.id}
-                              src={product.image}
+                              src={product.localImage ? `${API_URL}${product.localImage}` : product.image}
                               alt={product.name}
                               className="w-8 h-8 rounded-full border-2 border-white object-cover"
                             />
@@ -265,11 +267,11 @@ function Diseases() {
                       {formData.selectedPackage.products.map((product) => (
                         <div key={product.id} className="bg-slate-50 p-4 rounded-xl">
                           <div className="flex items-center space-x-3 mb-3">
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="w-10 h-10 rounded-lg object-cover"
-                            />
+                          <img
+                            src={product.localImage ? `${API_URL}${product.localImage}` : product.image}
+                            alt={product.name}
+                            className="w-10 h-10 rounded-lg object-cover"
+                          />
                             <h5 className="font-medium text-slate-800">{product.name}</h5>
                           </div>
                           <input
