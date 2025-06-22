@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
-function Dashboard() {
+function Dashboard({ onAddProduct, onAddPackage, onAddTestimonial }) {
   const [stats, setStats] = useState({
     productCount: 0,
     packageCount: 0,
@@ -125,11 +125,15 @@ function Dashboard() {
           <h2 className="text-xl font-semibold text-slate-800 mb-6">Acciones Rápidas</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { name: 'Agregar Producto', icon: '➕', color: 'from-blue-500 to-cyan-500' },
-              { name: 'Crear Paquete', icon: '🎁', color: 'from-green-500 to-emerald-500' },
-              { name: 'Configurar', icon: '⚙️', color: 'from-purple-500 to-pink-500' },
+              { name: 'Agregar Producto', icon: '➕', color: 'from-blue-500 to-cyan-500', onClick: onAddProduct },
+              { name: 'Crear Paquete', icon: '🎁', color: 'from-green-500 to-emerald-500', onClick: onAddPackage },
+              { name: 'Subir Testimonio', icon: '💬', color: 'from-purple-500 to-pink-500', onClick: onAddTestimonial },
             ].map((action) => (
-              <button key={action.name} className="p-4 rounded-xl border border-slate-200/50 hover:border-slate-300/50 transition-all duration-200 hover:shadow-md group bg-white/50 hover:bg-white/70">
+              <button
+                key={action.name}
+                onClick={action.onClick}
+                className="p-4 rounded-xl border border-slate-200/50 hover:border-slate-300/50 transition-all duration-200 hover:shadow-md group bg-white/50 hover:bg-white/70"
+              >
                 <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${action.color} flex items-center justify-center text-white mb-3 mx-auto group-hover:scale-110 transition-transform`}>
                   {action.icon}
                 </div>

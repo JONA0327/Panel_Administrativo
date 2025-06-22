@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Products from './components/Products';
@@ -10,19 +10,43 @@ import Settings from './components/Settings';
 
 function App() {
   const [currentView, setCurrentView] = useState('Dashboard');
+  const productsRef = useRef();
+  const packagesRef = useRef();
+  const testimonialsRef = useRef();
+
+  const openAddProduct = () => {
+    setCurrentView('Productos');
+    setTimeout(() => productsRef.current?.openAddModal(), 0);
+  };
+
+  const openAddPackage = () => {
+    setCurrentView('Paquetes');
+    setTimeout(() => packagesRef.current?.openAddModal(), 0);
+  };
+
+  const openAddTestimonial = () => {
+    setCurrentView('Testimonios');
+    setTimeout(() => testimonialsRef.current?.openAddModal(), 0);
+  };
 
   const renderCurrentView = () => {
     switch (currentView) {
       case 'Dashboard':
-        return <Dashboard />;
+        return (
+          <Dashboard
+            onAddProduct={openAddProduct}
+            onAddPackage={openAddPackage}
+            onAddTestimonial={openAddTestimonial}
+          />
+        );
       case 'Productos':
-        return <Products />;
+        return <Products ref={productsRef} />;
       case 'Paquetes':
-        return <Packages />;
+        return <Packages ref={packagesRef} />;
       case 'Índice de Enfermedades':
         return <Diseases />;
       case 'Testimonios':
-        return <Testimonials />;
+        return <Testimonials ref={testimonialsRef} />;
       case 'BD':
         return <Database />;
       case 'Configuración':

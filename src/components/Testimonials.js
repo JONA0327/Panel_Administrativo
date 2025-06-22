@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
-function Testimonials() {
+const Testimonials = forwardRef((props, ref) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTestimonial, setEditingTestimonial] = useState(null);
   const [testimonials, setTestimonials] = useState([]);
@@ -157,6 +157,22 @@ function Testimonials() {
     });
   };
 
+  const openAddModal = () => {
+    setEditingTestimonial(null);
+    setFormData({
+      name: '',
+      associatedProducts: [],
+      videoUrl: '',
+      videoFile: null,
+      subfolderId: ''
+    });
+    setIsModalOpen(true);
+  };
+
+  useImperativeHandle(ref, () => ({
+    openAddModal
+  }));
+
   return (
     <main className="flex-1 p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-y-auto min-h-screen">
       <div className="max-w-7xl mx-auto">
@@ -171,10 +187,7 @@ function Testimonials() {
             </p>
           </div>
           <button
-            onClick={() => {
-              setEditingTestimonial(null);
-              setIsModalOpen(true);
-            }}
+            onClick={openAddModal}
             className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 flex items-center space-x-2"
           >
             <span className="text-lg">➕</span>
@@ -389,6 +402,6 @@ function Testimonials() {
       </div>
     </main>
   );
-}
+});
 
 export default Testimonials;
