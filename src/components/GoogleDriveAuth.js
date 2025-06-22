@@ -1,109 +1,138 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 
-// gapi and google are loaded via script tags in index.html
-const gapi = window.gapi;
+// Helper to wait until the gapi script has finished loading
+const waitForGapi = () => {
+  if (window.gapi) return Promise.resolve();
+  return new Promise((resolve) => {
+    const interval = setInterval(() => {
+      if (window.gapi) {
+        clearInterval(interval);
+        resolve();
+      }
+    }, 50);
+  });
+};
 
 const CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 const API_KEY = process.env.REACT_APP_GOOGLE_API_KEY;
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 function GoogleDriveAuth({ onAuthenticated }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [folderPath, setFolderPath] = useState('');
+  const [folderPath, setFolderPath] = useState("");
   const [showFolderOptions, setShowFolderOptions] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
-  const [token, setToken] = useState('');
-  const [newFolderName, setNewFolderName] = useState('MediPanel_Storage');
-  const [subfolderName, setSubfolderName] = useState('');
-  const [rootFolderId, setRootFolderId] = useState('');
+  const [userEmail, setUserEmail] = useState("");
+  const [token, setToken] = useState("");
+  const [newFolderName, setNewFolderName] = useState("MediPanel_Storage");
+  const [subfolderName, setSubfolderName] = useState("");
+  const [rootFolderId, setRootFolderId] = useState("");
   const [subfolders, setSubfolders] = useState([]);
   const tokenClient = useRef(null);
 
   useEffect(() => {
-    if (!CLIENT_ID || !API_KEY) {
-      console.error(
-        'Missing Google API configuration. Please set REACT_APP_GOOGLE_CLIENT_ID and REACT_APP_GOOGLE_API_KEY in your .env file.'
-      );
-      return;
-    }
+    let isMounted = true;
 
-    async function start() {
-      await gapi.client
-        .init({
+    const init = async () => {
+      await waitForGapi();
+      if (!isMounted) return;
+
+      if (!CLIENT_ID || !API_KEY) {
+        console.error(
+          "Missing Google API configuration. Please set REACT_APP_GOOGLE_CLIENT_ID and REACT_APP_GOOGLE_API_KEY in your .env file.",
+        );
+        return;
+      }
+
+      async function start() {
+        await window.gapi.client.init({
           apiKey: API_KEY,
           discoveryDocs: [
-            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+            "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
           ],
         });
 
-      const savedToken = localStorage.getItem('drive_token');
-      const savedExp = parseInt(localStorage.getItem('drive_token_exp'), 10);
-      const savedEmail = localStorage.getItem('drive_email');
-      let savedFolderPath = localStorage.getItem('drive_folder_path');
-      let savedFolderId = localStorage.getItem('drive_folder_id');
+        if (!isMounted) return;
 
-      if (!savedFolderId) {
-        try {
-          const res = await fetch(`${API_URL}/config/drive-folder`);
-          const data = await res.json();
-          if (data.folderId) {
-            savedFolderId = data.folderId;
-            savedFolderPath = `https://drive.google.com/drive/folders/${data.folderId}`;
-            localStorage.setItem('drive_folder_id', savedFolderId);
-            localStorage.setItem('drive_folder_path', savedFolderPath);
+        const savedToken = localStorage.getItem("drive_token");
+        const savedExp = parseInt(localStorage.getItem("drive_token_exp"), 10);
+        const savedEmail = localStorage.getItem("drive_email");
+        let savedFolderPath = localStorage.getItem("drive_folder_path");
+        let savedFolderId = localStorage.getItem("drive_folder_id");
+
+        if (!savedFolderId) {
+          try {
+            const res = await fetch(`${API_URL}/config/drive-folder`);
+            const data = await res.json();
+            if (data.folderId) {
+              savedFolderId = data.folderId;
+              savedFolderPath = `https://drive.google.com/drive/folders/${data.folderId}`;
+              localStorage.setItem("drive_folder_id", savedFolderId);
+              localStorage.setItem("drive_folder_path", savedFolderPath);
+            }
+          } catch (err) {
+            console.error("Failed to load folder ID from server", err);
           }
-        } catch (err) {
-          console.error('Failed to load folder ID from server', err);
+        }
+
+        if (!isMounted) return;
+
+        if (savedToken && savedExp && Date.now() < savedExp) {
+          setToken(savedToken);
+          window.gapi.client.setToken({ access_token: savedToken });
+          if (savedEmail) setUserEmail(savedEmail);
+          if (savedFolderPath) {
+            setFolderPath(savedFolderPath);
+          }
+          if (savedFolderId) {
+            setRootFolderId(savedFolderId);
+          }
+          setIsAuthenticated(true);
+          setShowFolderOptions(false);
+          if (onAuthenticated) onAuthenticated(true);
+        } else if (tokenClient.current) {
+          tokenClient.current.requestAccessToken({ prompt: "" });
         }
       }
 
-      if (savedToken && savedExp && Date.now() < savedExp) {
-        setToken(savedToken);
-        gapi.client.setToken({ access_token: savedToken });
-        if (savedEmail) setUserEmail(savedEmail);
-        if (savedFolderPath) {
-          setFolderPath(savedFolderPath);
-        }
-        if (savedFolderId) {
-          setRootFolderId(savedFolderId);
-        }
-        setIsAuthenticated(true);
-        setShowFolderOptions(false);
-        if (onAuthenticated) onAuthenticated(true);
-      } else if (tokenClient.current) {
-        tokenClient.current.requestAccessToken({ prompt: '' });
-      }
-    }
+      window.gapi.load("client", start);
 
-    gapi.load('client', start);
+      tokenClient.current = window.google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope:
+          "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email",
+        callback: async (tokenResponse) => {
+          if (!isMounted) return;
+          const accessToken = tokenResponse.access_token;
+          const expiration = Date.now() + tokenResponse.expires_in * 1000;
+          setToken(accessToken);
+          window.gapi.client.setToken({ access_token: accessToken });
+          try {
+            const userInfo = await window.gapi.client.request({
+              path: "https://www.googleapis.com/oauth2/v2/userinfo",
+            });
+            if (!isMounted) return;
+            setUserEmail(userInfo.result.email);
+            localStorage.setItem("drive_email", userInfo.result.email);
+          } catch (err) {
+            console.error("Failed to fetch user info", err);
+          }
+          localStorage.setItem("drive_token", accessToken);
+          localStorage.setItem("drive_token_exp", expiration.toString());
+          if (!isMounted) return;
+          setIsAuthenticated(true);
+          setShowFolderOptions(true);
+          if (onAuthenticated) onAuthenticated(true);
+          setIsLoading(false);
+        },
+      });
+    };
 
-    tokenClient.current = window.google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope:
-        'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
-      callback: async (tokenResponse) => {
-        const accessToken = tokenResponse.access_token;
-        const expiration = Date.now() + tokenResponse.expires_in * 1000;
-        setToken(accessToken);
-        gapi.client.setToken({ access_token: accessToken });
-        try {
-          const userInfo = await gapi.client.request({
-            path: 'https://www.googleapis.com/oauth2/v2/userinfo',
-          });
-          setUserEmail(userInfo.result.email);
-          localStorage.setItem('drive_email', userInfo.result.email);
-        } catch (err) {
-          console.error('Failed to fetch user info', err);
-        }
-        localStorage.setItem('drive_token', accessToken);
-        localStorage.setItem('drive_token_exp', expiration.toString());
-        setIsAuthenticated(true);
-        setShowFolderOptions(true);
-        if (onAuthenticated) onAuthenticated(true);
-        setIsLoading(false);
-      },
-    });
+    init();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleGoogleSignIn = () => {
@@ -113,9 +142,9 @@ function GoogleDriveAuth({ onAuthenticated }) {
 
   useEffect(() => {
     fetch(`${API_URL}/config/subfolders`)
-      .then(res => res.json())
+      .then((res) => res.json())
       .then(setSubfolders)
-      .catch(err => console.error('Failed to fetch subfolders', err));
+      .catch((err) => console.error("Failed to fetch subfolders", err));
   }, []);
 
   const shareWithServiceAccount = async (folderId) => {
@@ -123,58 +152,58 @@ function GoogleDriveAuth({ onAuthenticated }) {
       const res = await fetch(`${API_URL}/config/service-account`);
       const data = await res.json();
       if (res.ok && data.email) {
-        await gapi.client.drive.permissions.create({
+        await window.gapi.client.drive.permissions.create({
           fileId: folderId,
           resource: {
-            role: 'writer',
-            type: 'user',
-            emailAddress: data.email
-          }
+            role: "writer",
+            type: "user",
+            emailAddress: data.email,
+          },
         });
       } else {
-        throw new Error('Service account email unavailable');
+        throw new Error("Service account email unavailable");
       }
     } catch (err) {
-      console.error('Failed to share folder with service account', err);
-      alert('Error al compartir la carpeta con la cuenta de servicio');
+      console.error("Failed to share folder with service account", err);
+      alert("Error al compartir la carpeta con la cuenta de servicio");
     }
   };
 
   const handleCreateFolder = async () => {
     try {
-      const response = await gapi.client.drive.files.create({
+      const response = await window.gapi.client.drive.files.create({
         resource: {
-          name: newFolderName || 'MediPanel_Storage',
-          mimeType: 'application/vnd.google-apps.folder',
+          name: newFolderName || "MediPanel_Storage",
+          mimeType: "application/vnd.google-apps.folder",
         },
-        fields: 'id,name',
+        fields: "id,name",
       });
       const folderId = response.result.id;
       const path = `https://drive.google.com/drive/folders/${folderId}`;
       setFolderPath(path);
       setRootFolderId(folderId);
-      localStorage.setItem('drive_folder_path', path);
-      localStorage.setItem('drive_folder_id', folderId);
+      localStorage.setItem("drive_folder_path", path);
+      localStorage.setItem("drive_folder_id", folderId);
       try {
         const res = await fetch(`${API_URL}/config/drive-folder`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ folderId }),
         });
         if (!res.ok) {
           const payload = await res.json().catch(() => ({}));
           throw new Error(
-            payload.error || payload.message || 'Failed to store folder ID'
+            payload.error || payload.message || "Failed to store folder ID",
           );
         }
       } catch (err) {
-        console.error('Failed to store folder ID', err);
-        alert('Error al configurar la carpeta en el servidor');
+        console.error("Failed to store folder ID", err);
+        alert("Error al configurar la carpeta en el servidor");
       }
       await shareWithServiceAccount(folderId);
       alert(`Carpeta creada exitosamente: ${response.result.name}`);
     } catch (err) {
-      console.error('Error al crear la carpeta', err);
+      console.error("Error al crear la carpeta", err);
     }
   };
 
@@ -182,21 +211,23 @@ function GoogleDriveAuth({ onAuthenticated }) {
     if (!rootFolderId || !subfolderName.trim()) return;
     try {
       const res = await fetch(`${API_URL}/config/subfolders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: subfolderName.trim() })
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: subfolderName.trim() }),
       });
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        throw new Error(payload.error || payload.message || 'Failed to create subfolder');
+        throw new Error(
+          payload.error || payload.message || "Failed to create subfolder",
+        );
       }
       const saved = await res.json();
-      setSubfolders(prev => [...prev, saved]);
+      setSubfolders((prev) => [...prev, saved]);
       alert(`Subcarpeta creada en el servidor: ${saved.name}`);
-      setSubfolderName('');
+      setSubfolderName("");
     } catch (err) {
-      console.error('Error al crear subcarpeta', err);
-      alert('Error al crear la subcarpeta en el servidor');
+      console.error("Error al crear subcarpeta", err);
+      alert("Error al crear la subcarpeta en el servidor");
     }
   };
 
@@ -205,26 +236,26 @@ function GoogleDriveAuth({ onAuthenticated }) {
     if (folderPath.trim()) {
       const trimmed = folderPath.trim();
       setFolderPath(trimmed);
-      localStorage.setItem('drive_folder_path', trimmed);
+      localStorage.setItem("drive_folder_path", trimmed);
       const idMatch = trimmed.match(/[-\w]{25,}/);
       if (idMatch) {
         setRootFolderId(idMatch[0]);
-        localStorage.setItem('drive_folder_id', idMatch[0]);
+        localStorage.setItem("drive_folder_id", idMatch[0]);
         try {
           const res = await fetch(`${API_URL}/config/drive-folder`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ folderId: idMatch[0] }),
           });
           if (!res.ok) {
             const payload = await res.json().catch(() => ({}));
             throw new Error(
-              payload.error || payload.message || 'Failed to store folder ID'
+              payload.error || payload.message || "Failed to store folder ID",
             );
           }
         } catch (err) {
-          console.error('Failed to store folder ID', err);
-          alert('Error al configurar la carpeta en el servidor');
+          console.error("Failed to store folder ID", err);
+          alert("Error al configurar la carpeta en el servidor");
         }
         await shareWithServiceAccount(idMatch[0]);
       }
@@ -236,22 +267,22 @@ function GoogleDriveAuth({ onAuthenticated }) {
   const handleSignOut = () => {
     if (token) {
       window.google.accounts.oauth2.revoke(token, () => {
-        gapi.client.setToken('');
+        window.gapi.client.setToken("");
       });
     }
 
-    localStorage.removeItem('drive_token');
-    localStorage.removeItem('drive_token_exp');
-    localStorage.removeItem('drive_email');
-    localStorage.removeItem('drive_folder_path');
-    localStorage.removeItem('drive_folder_id');
+    localStorage.removeItem("drive_token");
+    localStorage.removeItem("drive_token_exp");
+    localStorage.removeItem("drive_email");
+    localStorage.removeItem("drive_folder_path");
+    localStorage.removeItem("drive_folder_id");
 
     setIsAuthenticated(false);
     setShowFolderOptions(false);
-    setFolderPath('');
-    setRootFolderId('');
-    setUserEmail('');
-    setToken('');
+    setFolderPath("");
+    setRootFolderId("");
+    setUserEmail("");
+    setToken("");
     if (onAuthenticated) {
       onAuthenticated(false);
     }
@@ -268,9 +299,10 @@ function GoogleDriveAuth({ onAuthenticated }) {
             Conectar con Google Drive
           </h3>
           <p className="text-slate-600 mb-6">
-            Conecta tu cuenta de Google Drive para almacenar archivos de forma segura
+            Conecta tu cuenta de Google Drive para almacenar archivos de forma
+            segura
           </p>
-          
+
           <button
             onClick={handleGoogleSignIn}
             disabled={isLoading}
@@ -284,10 +316,22 @@ function GoogleDriveAuth({ onAuthenticated }) {
             ) : (
               <>
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  />
                 </svg>
                 <span>Iniciar sesión con Google</span>
               </>
@@ -306,7 +350,9 @@ function GoogleDriveAuth({ onAuthenticated }) {
             <span className="text-white text-lg">✓</span>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-slate-800">Google Drive Conectado</h3>
+            <h3 className="text-lg font-semibold text-slate-800">
+              Google Drive Conectado
+            </h3>
             <p className="text-sm text-slate-600">{userEmail}</p>
           </div>
         </div>
@@ -321,8 +367,10 @@ function GoogleDriveAuth({ onAuthenticated }) {
       {showFolderOptions && (
         <div className="space-y-4">
           <div className="bg-blue-50 p-4 rounded-xl">
-            <h4 className="font-semibold text-slate-700 mb-3">Configurar Carpeta de Almacenamiento</h4>
-            
+            <h4 className="font-semibold text-slate-700 mb-3">
+              Configurar Carpeta de Almacenamiento
+            </h4>
+
             <form onSubmit={handleFolderPathSubmit} className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
