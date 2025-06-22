@@ -9,6 +9,8 @@ function Diseases() {
   const [allPackages, setAllPackages] = useState([]);
   const [displayPackages, setDisplayPackages] = useState([]);
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -98,6 +100,7 @@ function Diseases() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setIsSaving(true);
     const payload = {
       name: formData.name,
       description: formData.description,
@@ -117,9 +120,14 @@ function Diseases() {
         .then(res => res.json())
         .then(updated => {
           setDiseases(prev => prev.map(d => (d._id === updated._id ? updated : d)));
+          setIsSaving(false);
+          alert('Enfermedad actualizada');
           closeModal();
         })
-        .catch(err => console.error('Failed to update disease', err));
+        .catch(err => {
+          console.error('Failed to update disease', err);
+          setIsSaving(false);
+        });
     } else {
       fetch(`${API_URL}/diseases`, {
         method: 'POST',
@@ -129,9 +137,14 @@ function Diseases() {
         .then(res => res.json())
         .then(created => {
           setDiseases(prev => [...prev, created]);
+          setIsSaving(false);
+          alert('Enfermedad agregada');
           closeModal();
         })
-        .catch(err => console.error('Failed to create disease', err));
+        .catch(err => {
+          console.error('Failed to create disease', err);
+          setIsSaving(false);
+        });
     }
   };
 
@@ -304,8 +317,15 @@ function Diseases() {
                 )}
                 <div className="flex space-x-4 pt-4">
                   <button type="button" onClick={closeModal} className="flex-1 px-6 py-3 border border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition-colors">Cancelar</button>
-                  <button type="submit" disabled={!formData.selectedPackage} className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {editingDisease ? 'Guardar Cambios' : 'Añadir Enfermedad'}
+                  <button type="submit" disabled={isSaving || !formData.selectedPackage} className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
+                    {isSaving ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin"></div>
+                        <span>Guardando...</span>
+                      </>
+                    ) : (
+                      <>{editingDisease ? "Guardar Cambios" : "Añadir Enfermedad"}</>
+                    )}
                   </button>
                 </div>
               </form>

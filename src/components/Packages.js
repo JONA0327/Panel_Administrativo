@@ -6,6 +6,7 @@ const Packages = forwardRef(({ products }, ref) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [packages, setPackages] = useState([]);
   const [editingPackage, setEditingPackage] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -81,6 +82,7 @@ const Packages = forwardRef(({ products }, ref) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setIsSaving(true);
     const payload = {
       name: formData.name,
       description: formData.description,
@@ -95,9 +97,14 @@ const Packages = forwardRef(({ products }, ref) => {
         .then(res => res.json())
         .then(updated => {
           setPackages(prev => prev.map(p => (p._id === updated._id ? updated : p)));
+          setIsSaving(false);
+          alert('Paquete actualizado');
           closeModal();
         })
-        .catch(err => console.error('Failed to update package', err));
+        .catch(err => {
+          console.error('Failed to update package', err);
+          setIsSaving(false);
+        });
     } else {
       fetch(`${API_URL}/packages`, {
         method: 'POST',
@@ -107,9 +114,14 @@ const Packages = forwardRef(({ products }, ref) => {
         .then(res => res.json())
         .then(pkg => {
           setPackages(prev => [...prev, pkg]);
+          setIsSaving(false);
+          alert('Paquete agregado');
           closeModal();
         })
-        .catch(err => console.error('Failed to create package', err));
+        .catch(err => {
+          console.error('Failed to create package', err);
+          setIsSaving(false);
+        });
     }
   };
 
@@ -352,11 +364,18 @@ const Packages = forwardRef(({ products }, ref) => {
                   </button>
                   <button
                     type="submit"
-                    disabled={formData.selectedProducts.length === 0 || (formData.name && availableProducts.length === 0)}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {editingPackage ? 'Guardar Cambios' : 'Crear Paquete'}
-                  </button>
+                      disabled={isSaving || formData.selectedProducts.length === 0 || (formData.name && availableProducts.length === 0)}
+                      className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                    >
+                      {isSaving ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-gray-300 border-t-green-500 rounded-full animate-spin"></div>
+                          <span>Guardando...</span>
+                        </>
+                      ) : (
+                        <>{editingPackage ? 'Guardar Cambios' : 'Crear Paquete'}</>
+                      )}
+                    </button>
                 </div>
               </form>
             </div>
