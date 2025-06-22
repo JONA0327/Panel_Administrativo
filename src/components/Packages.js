@@ -168,7 +168,7 @@ function Packages({ products }) {
                   {pkg.products.slice(0, 3).map((product, index) => (
                     <img
                       key={product._id}
-                      src={product.image}
+                      src={product.localImage ? `${API_URL}${product.localImage}` : product.image}
                       alt={product.name}
                       className="w-12 h-12 rounded-full border-2 border-white object-cover"
                       style={{ zIndex: pkg.products.length - index }}
@@ -289,7 +289,7 @@ function Packages({ products }) {
                       >
                         <div className="flex items-center space-x-3">
                           <img
-                            src={product.image}
+                            src={product.localImage ? `${API_URL}${product.localImage}` : product.image}
                             alt={product.name}
                             className="w-12 h-12 rounded-lg object-cover"
                           />
