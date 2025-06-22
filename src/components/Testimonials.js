@@ -91,6 +91,7 @@ function Testimonials() {
       .then(res => res.json())
       .then(data => {
         setTestimonials(prev => [...prev, data]);
+        alert('Testimonio guardado exitosamente');
         closeModal();
       })
       .catch(err => console.error('Failed to create testimonial', err));
@@ -145,7 +146,11 @@ function Testimonials() {
             <div key={testimonial._id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
               <div className="mb-4">
                 <video
-                  src={testimonial.localVideo || testimonial.video}
+                  src={
+                    testimonial.localVideo
+                      ? `${API_URL}${testimonial.localVideo}`
+                      : testimonial.video
+                  }
                   className="w-full h-48 object-cover rounded-xl"
                   controls
                   poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f1f5f9'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='12' fill='%2364748b' text-anchor='middle' dy='.3em'%3EVideo%3C/text%3E%3C/svg%3E"
