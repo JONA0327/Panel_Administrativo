@@ -1,16 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
 function Testimonials() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [testimonials, setTestimonials] = useState([
-    {
-      id: 1,
-      name: 'Testimonio de María García',
-      associatedProducts: ['Vitamina D3', 'Omega 3'],
-      videoUrl: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
-      videoFile: null
-    }
-  ]);
+  const [testimonials, setTestimonials] = useState([]);
+  const [products, setProducts] = useState([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -19,12 +14,20 @@ function Testimonials() {
     videoFile: null
   });
 
-  const availableProducts = [
-    { id: 1, name: 'Vitamina D3' },
-    { id: 2, name: 'Omega 3' },
-    { id: 3, name: 'Magnesio' },
-    { id: 4, name: 'Zinc' }
-  ];
+  const availableProducts = products;
+  const productMap = Object.fromEntries(products.map(p => [p._id, p.name]));
+
+  useEffect(() => {
+    fetch(`${API_URL}/testimonials`)
+      .then(res => res.json())
+      .then(setTestimonials)
+      .catch(err => console.error('Failed to load testimonials', err));
+
+    fetch(`${API_URL}/products`)
+      .then(res => res.json())
+      .then(setProducts)
+      .catch(err => console.error('Failed to load products', err));
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -37,27 +40,30 @@ function Testimonials() {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const videoUrl = URL.createObjectURL(file);
-      setFormData(prev => ({
-        ...prev,
-        videoFile: file,
-        videoUrl: videoUrl
-      }));
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        setFormData(prev => ({
+          ...prev,
+          videoUrl: evt.target.result,
+          videoFile: file
+        }));
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const toggleProductSelection = (productName) => {
+  const toggleProductSelection = (productId) => {
     setFormData(prev => {
-      const isSelected = prev.associatedProducts.includes(productName);
+      const isSelected = prev.associatedProducts.includes(productId);
       if (isSelected) {
         return {
           ...prev,
-          associatedProducts: prev.associatedProducts.filter(p => p !== productName)
+          associatedProducts: prev.associatedProducts.filter(p => p !== productId)
         };
       } else {
         return {
           ...prev,
-          associatedProducts: [...prev.associatedProducts, productName]
+          associatedProducts: [...prev.associatedProducts, productId]
         };
       }
     });
@@ -65,20 +71,30 @@ function Testimonials() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const newTestimonial = {
-      id: testimonials.length + 1,
-      name: formData.name,
-      associatedProducts: formData.associatedProducts,
-      videoUrl: formData.videoUrl,
-      videoFile: formData.videoFile
-    };
-    setTestimonials(prev => [...prev, newTestimonial]);
-    closeModal();
+    fetch(`${API_URL}/testimonials`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: formData.name,
+        associatedProducts: formData.associatedProducts,
+        video: formData.videoUrl
+      })
+    })
+      .then(res => res.json())
+      .then(data => {
+        setTestimonials(prev => [...prev, data]);
+        closeModal();
+      })
+      .catch(err => console.error('Failed to create testimonial', err));
   };
 
   const deleteTestimonial = (testimonialId) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este testimonio?')) {
-      setTestimonials(prev => prev.filter(testimonial => testimonial.id !== testimonialId));
+      fetch(`${API_URL}/testimonials/${testimonialId}`, { method: 'DELETE' })
+        .then(() => {
+          setTestimonials(prev => prev.filter(t => t._id !== testimonialId));
+        })
+        .catch(err => console.error('Failed to delete testimonial', err));
     }
   };
 
@@ -117,10 +133,10 @@ function Testimonials() {
         {/* Testimonials Grid */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {testimonials.map((testimonial) => (
-            <div key={testimonial.id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div key={testimonial._id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
               <div className="mb-4">
                 <video
-                  src={testimonial.videoUrl}
+                  src={testimonial.localVideo || testimonial.video}
                   className="w-full h-48 object-cover rounded-xl"
                   controls
                   poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f1f5f9'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='12' fill='%2364748b' text-anchor='middle' dy='.3em'%3EVideo%3C/text%3E%3C/svg%3E"
@@ -131,9 +147,9 @@ function Testimonials() {
                 <div>
                   <p className="text-sm text-slate-600 mb-2">Productos asociados:</p>
                   <div className="flex flex-wrap gap-1">
-                    {testimonial.associatedProducts.map((product, index) => (
+                    {testimonial.associatedProducts.map((pid, index) => (
                       <span key={index} className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
-                        {product}
+                        {productMap[pid] || pid}
                       </span>
                     ))}
                   </div>
@@ -143,7 +159,7 @@ function Testimonials() {
                     Editar
                   </button>
                   <button 
-                    onClick={() => deleteTestimonial(testimonial.id)}
+                    onClick={() => deleteTestimonial(testimonial._id)}
                     className="text-red-600 hover:text-red-700 font-medium text-sm"
                   >
                     Eliminar
@@ -196,21 +212,21 @@ function Testimonials() {
                     {availableProducts.map((product) => (
                       <div
                         key={product.id}
-                        className={`p-3 border rounded-xl cursor-pointer transition-all ${
-                          formData.associatedProducts.includes(product.name)
+                      className={`p-3 border rounded-xl cursor-pointer transition-all ${
+                          formData.associatedProducts.includes(product._id)
                             ? 'border-purple-500 bg-purple-50'
                             : 'border-slate-300 hover:border-slate-400'
                         }`}
-                        onClick={() => toggleProductSelection(product.name)}
+                        onClick={() => toggleProductSelection(product._id)}
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-medium text-slate-800">{product.name}</span>
                           <div className={`w-5 h-5 rounded-full border-2 ${
-                            formData.associatedProducts.includes(product.name)
+                            formData.associatedProducts.includes(product._id)
                               ? 'bg-purple-500 border-purple-500'
                               : 'border-slate-300'
                           }`}>
-                            {formData.associatedProducts.includes(product.name) && (
+                            {formData.associatedProducts.includes(product._id) && (
                               <div className="w-full h-full flex items-center justify-center">
                                 <span className="text-white text-xs">✓</span>
                               </div>
