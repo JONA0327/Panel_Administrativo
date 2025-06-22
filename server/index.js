@@ -14,10 +14,19 @@ const Product = require('./DB/productos');
 const Package = require('./DB/packages');
 const Disease = require('./DB/diseases');
 const Testimonial = require('./DB/testimonials');
+const Activity = require('./DB/activities');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '500mb' }));
+
+async function logActivity(action, details) {
+  try {
+    await Activity.create({ action, details });
+  } catch (err) {
+    console.error('Failed to log activity:', err.message);
+  }
+}
 const imageCacheDir = path.join(__dirname, 'image_cache');
 if (!fs.existsSync(imageCacheDir)) {
   fs.mkdirSync(imageCacheDir, { recursive: true });
@@ -177,6 +186,30 @@ app.get('/dashboard/stats', async (req, res) => {
   }
 });
 
+app.post('/activities', async (req, res) => {
+  const { action, details } = req.body;
+  try {
+    const activity = await Activity.create({ action, details });
+    res.status(201).json(activity);
+  } catch (err) {
+    console.error('Error logging activity:', err);
+    res.status(500).json({ error: 'Failed to log activity' });
+  }
+});
+
+app.get('/activities', async (req, res) => {
+  const limit = parseInt(req.query.limit, 10) || 10;
+  try {
+    const activities = await Activity.find()
+      .sort({ createdAt: -1 })
+      .limit(limit);
+    res.json(activities);
+  } catch (err) {
+    console.error('Error fetching activities:', err);
+    res.status(500).json({ error: 'Failed to fetch activities' });
+  }
+});
+
 // Obtener datos de una colección específica
 app.get('/database/collections/:name/data', async (req, res) => {
   try {
@@ -282,6 +315,7 @@ app.post('/config/drive-folder', async (req, res) => {
     }
 
     res.json({ message: 'Drive folder configured', folderId: driveFolderId });
+    await logActivity('Config updated', 'Drive folder set');
   } catch (err) {
     console.error('Error saving Drive folder config:', err);
     res.status(500).json({ error: 'Failed to save config' });
@@ -323,6 +357,7 @@ app.post('/config/testimonials-folder', async (req, res) => {
     }
 
     res.json({ message: 'Testimonials folder configured', folderId: testimonialsFolderId });
+    await logActivity('Config updated', 'Testimonials folder set');
   } catch (err) {
     console.error('Error saving testimonials folder config:', err);
     res.status(500).json({ error: 'Failed to save config' });
@@ -394,6 +429,7 @@ app.post('/config/subfolders', async (req, res) => {
     );
 
     res.status(201).json({ name: name.trim(), folderId, link });
+    await logActivity('Config updated', `Subfolder ${name.trim()} created`);
   } catch (err) {
     console.error('Error creating subfolder:', err);
     res.status(500).json({ error: 'Failed to create subfolder', details: err.message });
@@ -799,6 +835,7 @@ app.post('/products', async (req, res) => {
     }
     const product = new Product(req.body);
     await product.save();
+    await logActivity('Product created', product.name);
     const localImage = await getLocalImage(
       product.fileId || extractFileId(product.image)
     );
@@ -846,6 +883,7 @@ app.put('/products/:id', async (req, res) => {
       updateData,
       { new: true }
     );
+    await logActivity('Product updated', product.name);
     const localImage = await getLocalImage(
       product.fileId || extractFileId(product.image)
     );
@@ -864,6 +902,8 @@ app.delete('/products/:id', async (req, res) => {
     const fileId = product.fileId || extractFileId(product.image);
     await deleteImageFromDrive(fileId);
     deleteLocalImage(fileId);
+
+    await logActivity('Product deleted', product.name);
 
     res.json({ message: 'Product deleted' });
   } catch (err) {
@@ -892,6 +932,7 @@ app.post('/packages', async (req, res) => {
     const totalPrice = products.reduce((s, p) => s + (p.price || 0), 0);
     const pkg = new Package({ name, description, productIds, totalPrice });
     await pkg.save();
+    await logActivity('Package created', pkg.name);
     const populated = await packageWithProducts(pkg);
     res.status(201).json(populated);
   } catch (err) {
@@ -911,6 +952,7 @@ app.put('/packages/:id', async (req, res) => {
     }
     const pkg = await Package.findByIdAndUpdate(req.params.id, updateData, { new: true });
     if (!pkg) return res.status(404).json({ error: 'Package not found' });
+    await logActivity('Package updated', pkg.name);
     const populated = await packageWithProducts(pkg);
     res.json(populated);
   } catch (err) {
@@ -948,6 +990,7 @@ app.post('/diseases', async (req, res) => {
     const { name, description, packageId, dosages = [] } = req.body;
     const disease = new Disease({ name, description, packageId, dosages });
     await disease.save();
+    await logActivity('Disease created', disease.name);
     const populated = await diseaseWithDetails(disease);
     res.status(201).json(populated);
   } catch (err) {
@@ -974,6 +1017,7 @@ app.put('/diseases/:id', async (req, res) => {
     const updateData = { name, description, packageId, dosages };
     const disease = await Disease.findByIdAndUpdate(req.params.id, updateData, { new: true });
     if (!disease) return res.status(404).json({ error: 'Disease not found' });
+    await logActivity('Disease updated', disease.name);
     const populated = await diseaseWithDetails(disease);
     res.json(populated);
   } catch (err) {
@@ -986,6 +1030,7 @@ app.delete('/diseases/:id', async (req, res) => {
   try {
     const disease = await Disease.findByIdAndDelete(req.params.id);
     if (!disease) return res.status(404).json({ error: 'Disease not found' });
+    await logActivity('Disease deleted', disease.name);
     res.json({ message: 'Disease deleted' });
   } catch (err) {
     console.error('Error deleting disease:', err);
@@ -1105,6 +1150,7 @@ app.post('/testimonials', async (req, res) => {
     }
     const testimonial = new Testimonial(req.body);
     await testimonial.save();
+    await logActivity('Testimonial created', testimonial.name);
     const localVideo = await getLocalVideo(testimonial.fileId || extractFileId(testimonial.video));
     res.status(201).json({ ...testimonial.toObject(), localVideo });
   } catch (err) {
@@ -1136,6 +1182,7 @@ app.put('/testimonials/:id', async (req, res) => {
     }
 
     const updated = await Testimonial.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    await logActivity('Testimonial updated', updated.name);
     const localVideo = await getLocalVideo(updated.fileId || extractFileId(updated.video));
     res.json({ ...updated.toObject(), localVideo });
   } catch (err) {
@@ -1151,6 +1198,7 @@ app.delete('/testimonials/:id', async (req, res) => {
     const fileId = t.fileId || extractFileId(t.video);
     await deleteVideoFromDrive(fileId);
     deleteLocalVideo(fileId);
+    await logActivity('Testimonial deleted', t.name);
     res.json({ message: 'Testimonial deleted' });
   } catch (err) {
     console.error('Error deleting testimonial:', err);
