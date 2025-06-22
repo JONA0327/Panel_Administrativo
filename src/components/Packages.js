@@ -14,6 +14,7 @@ function Packages({ products }) {
   });
 
   const [availableProducts, setAvailableProducts] = useState([]);
+  const [suggestMessage, setSuggestMessage] = useState('');
 
   useEffect(() => {
     fetch(`${API_URL}/packages`)
@@ -25,6 +26,7 @@ function Packages({ products }) {
   useEffect(() => {
     if (!formData.name) {
       setAvailableProducts([]);
+      setSuggestMessage('');
       return;
     }
     fetch(`${API_URL}/packages/suggested`, {
@@ -33,8 +35,19 @@ function Packages({ products }) {
       body: JSON.stringify({ title: formData.name })
     })
       .then(res => res.json())
-      .then(setAvailableProducts)
-      .catch(err => console.error('Failed to load suggested products', err));
+      .then(data => {
+        setAvailableProducts(Array.isArray(data) ? data : []);
+        if (Array.isArray(data) && data.length === 0) {
+          setSuggestMessage('No se encontraron productos sugeridos.');
+        } else {
+          setSuggestMessage('');
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load suggested products', err);
+        setAvailableProducts([]);
+        setSuggestMessage('Error al obtener productos sugeridos.');
+      });
   }, [formData.name]);
 
   const handleInputChange = (e) => {
@@ -301,6 +314,9 @@ function Packages({ products }) {
                         </div>
                       </div>
                     ))}
+                    {suggestMessage && (
+                      <p className="text-center text-sm text-slate-500">{suggestMessage}</p>
+                    )}
                   </div>
                 </div>
 
@@ -330,7 +346,7 @@ function Packages({ products }) {
                   </button>
                   <button
                     type="submit"
-                    disabled={formData.selectedProducts.length === 0}
+                    disabled={formData.selectedProducts.length === 0 || (formData.name && availableProducts.length === 0)}
                     className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {editingPackage ? 'Guardar Cambios' : 'Crear Paquete'}
