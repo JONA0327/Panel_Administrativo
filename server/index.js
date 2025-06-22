@@ -16,7 +16,7 @@ const Disease = require('./DB/diseases');
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '500mb' }));
 const imageCacheDir = path.join(__dirname, 'image_cache');
 if (!fs.existsSync(imageCacheDir)) {
   fs.mkdirSync(imageCacheDir, { recursive: true });
