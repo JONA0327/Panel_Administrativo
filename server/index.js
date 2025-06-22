@@ -12,6 +12,7 @@ require('dotenv').config();
 const Config = require('./DB/config');
 const Product = require('./DB/productos');
 const Package = require('./DB/packages');
+const Disease = require('./DB/diseases');
 
 const app = express();
 app.use(cors());
@@ -340,6 +341,27 @@ async function packageWithProducts(pkg) {
   return { ...pkg.toObject(), products: products.filter(Boolean) };
 }
 
+async function diseaseWithDetails(disease) {
+  const pkg = disease.packageId
+    ? await Package.findById(disease.packageId)
+    : null;
+  const populatedPackage = pkg ? await packageWithProducts(pkg) : null;
+  const populatedDosages = await Promise.all(
+    (disease.dosages || []).map(async d => {
+      const product = await Product.findById(d.productId);
+      if (!product) return null;
+      const fileId = product.fileId || extractFileId(product.image);
+      const localImage = await getLocalImage(fileId);
+      return { product: { ...product.toObject(), localImage }, dosage: d.dosage };
+    })
+  );
+  return {
+    ...disease.toObject(),
+    package: populatedPackage,
+    dosages: populatedDosages.filter(Boolean)
+  };
+}
+
 // CRUD de productos
 
 // Obtener productos con imagenes locales
@@ -619,6 +641,149 @@ app.delete('/packages/:id', async (req, res) => {
   } catch (err) {
     console.error('Error deleting package:', err);
     res.status(400).json({ error: 'Failed to delete package', details: err.message });
+  }
+});
+
+// CRUD de enfermedades
+
+app.get('/diseases', async (req, res) => {
+  try {
+    const list = await Disease.find();
+    const populated = await Promise.all(list.map(diseaseWithDetails));
+    res.json(populated);
+  } catch (err) {
+    console.error('Error fetching diseases:', err);
+    res.status(500).json({ error: 'Failed to fetch diseases' });
+  }
+});
+
+app.post('/diseases', async (req, res) => {
+  try {
+    const { name, description, packageId, dosages = [] } = req.body;
+    const disease = new Disease({ name, description, packageId, dosages });
+    await disease.save();
+    const populated = await diseaseWithDetails(disease);
+    res.status(201).json(populated);
+  } catch (err) {
+    console.error('Error creating disease:', err);
+    res.status(400).json({ error: 'Failed to create disease', details: err.message });
+  }
+});
+
+app.get('/diseases/:id', async (req, res) => {
+  try {
+    const disease = await Disease.findById(req.params.id);
+    if (!disease) return res.status(404).json({ error: 'Disease not found' });
+    const populated = await diseaseWithDetails(disease);
+    res.json(populated);
+  } catch (err) {
+    console.error('Error fetching disease:', err);
+    res.status(400).json({ error: 'Failed to fetch disease', details: err.message });
+  }
+});
+
+app.put('/diseases/:id', async (req, res) => {
+  try {
+    const { name, description, packageId, dosages } = req.body;
+    const updateData = { name, description, packageId, dosages };
+    const disease = await Disease.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    if (!disease) return res.status(404).json({ error: 'Disease not found' });
+    const populated = await diseaseWithDetails(disease);
+    res.json(populated);
+  } catch (err) {
+    console.error('Error updating disease:', err);
+    res.status(400).json({ error: 'Failed to update disease', details: err.message });
+  }
+});
+
+app.delete('/diseases/:id', async (req, res) => {
+  try {
+    const disease = await Disease.findByIdAndDelete(req.params.id);
+    if (!disease) return res.status(404).json({ error: 'Disease not found' });
+    res.json({ message: 'Disease deleted' });
+  } catch (err) {
+    console.error('Error deleting disease:', err);
+    res.status(400).json({ error: 'Failed to delete disease', details: err.message });
+  }
+});
+
+// AI helpers for diseases
+
+app.post('/diseases/describe', async (req, res) => {
+  const { title } = req.body || {};
+  if (!title) return res.status(400).json({ error: 'Title required' });
+
+  const systemPrompt = `You are a medical writer. Given the name of a disease, provide a short description in Spanish.`;
+  const userPrompt = `Disease: "${title}"`;
+  try {
+    const baseUrl = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com';
+    const dsUrl = `${baseUrl}/chat/completions`;
+    const resp = await axios.post(
+      dsUrl,
+      {
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt.trim() },
+          { role: 'user', content: userPrompt.trim() }
+        ],
+        stream: false
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`
+        }
+      }
+    );
+    let content = resp.data.choices?.[0]?.message?.content || '';
+    content = content.trim().replace(/^```(?:json|text)?\r?\n/, '').replace(/\r?\n```$/, '');
+    res.json({ description: content });
+  } catch (err) {
+    console.error('DeepSeek API error:', err.response?.status, err.message);
+    res.status(500).json({ error: 'Failed to generate description' });
+  }
+});
+
+app.post('/diseases/recommend-package', async (req, res) => {
+  const { title } = req.body || {};
+  if (!title) return res.status(400).json({ error: 'Title required' });
+
+  try {
+    const pkgs = await Package.find();
+    const names = pkgs.map(p => p.name);
+    const systemPrompt = `You are a medical assistant. From the following packages choose the one that best matches the provided disease. If none match, reply with 'none'. Reply only with the package name or 'none'.`;
+    const userPrompt = `Disease: "${title}"\nPackages: ${names.join(', ')}`;
+    const baseUrl = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com';
+    const dsUrl = `${baseUrl}/chat/completions`;
+    const resp = await axios.post(
+      dsUrl,
+      {
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt.trim() },
+          { role: 'user', content: userPrompt.trim() }
+        ],
+        stream: false
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`
+        }
+      }
+    );
+    let content = resp.data.choices?.[0]?.message?.content || '';
+    content = content.trim().replace(/^```(?:json|text)?\r?\n/, '').replace(/\r?\n```$/, '').toLowerCase();
+    const match = pkgs.find(p => content.includes(p.name.toLowerCase()));
+    if (match) {
+      const populated = await packageWithProducts(match);
+      return res.json([populated]);
+    }
+    const all = await Promise.all(pkgs.map(packageWithProducts));
+    res.json(all);
+  } catch (err) {
+    console.error('Error recommending package:', err);
+    res.status(500).json({ error: 'Failed to recommend package' });
   }
 });
 
