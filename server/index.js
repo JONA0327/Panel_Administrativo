@@ -342,58 +342,106 @@ async function packageWithProducts(pkg) {
 
 // CRUD de productos
 
+// Obtener productos con imagenes locales
+// Obtener productos con imágenes locales
 app.get('/products', async (req, res) => {
   try {
     const products = await Product.find();
     const withLocal = await Promise.all(
       products.map(async p => {
-        const fileId = p.fileId || extractFileId(p.image);
+        const fileId     = p.fileId || extractFileId(p.image);
         const localImage = await getLocalImage(fileId);
         return { ...p.toObject(), localImage };
       })
     );
-    res.json(withLocal);
+    return res.json(withLocal);
   } catch (err) {
     console.error('Error fetching products:', err);
-    res.status(500).json({ error: 'Failed to fetch products' });
+    return res.status(500).json({ error: 'Failed to fetch products' });
   }
-});
+});  // <- Cierre correcto de GET /products
 
-// Suggest products based on package title using DeepSeek or similar API
+// Sugerir productos según título usando DeepSeek
 app.post('/packages/suggested', async (req, res) => {
   const { title } = req.body || {};
   if (!title) {
     return res.status(400).json({ error: 'Title required' });
   }
-  let detected = [];
+
+  // 1) Obtén todos los keywords de la BD
+  let allowedKeywords = [];
   try {
-    const dsUrl = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/analyze';
-    const resp = await axios.post(
-      dsUrl,
-      { text: title },
-      { headers: { Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` } }
-    );
-    if (resp.data && Array.isArray(resp.data.keywords)) {
-      detected = resp.data.keywords.map(k => String(k).toLowerCase());
-    }
+    allowedKeywords = await Product.distinct('keywords');
+    if (!Array.isArray(allowedKeywords)) allowedKeywords = [];
   } catch (err) {
-    console.error('DeepSeek API error:', err.message);
+    console.error('Error fetching allowed keywords:', err);
   }
 
+  // 2) Prepara el prompt
+  const systemPrompt = `
+You are a product-matching assistant.
+Given an input title and a list of ALLOWED KEYWORDS,
+you must extract which of those keywords are relevant to the title.
+Return a VALID JSON ARRAY of those matching keywords.
+`;
+  const userPrompt = `
+Title: "${title}"
+Allowed keywords: ${allowedKeywords.join(', ')}
+`;
+
+  // 3) Llama a DeepSeek
+  let detected = [];
+  try {
+    const baseUrl = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com';
+    const dsUrl   = `${baseUrl}/chat/completions`;
+    const resp    = await axios.post(
+      dsUrl,
+      {
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt.trim() },
+          { role: 'user',   content: userPrompt.trim() }
+        ],
+        stream: false
+      },
+      {
+        headers: {
+          'Content-Type':  'application/json',
+          Authorization:   `Bearer ${process.env.DEEPSEEK_API_KEY}`
+        }
+      }
+    );
+
+    //  Limpia fences ```json ... ``` si vienen
+    let content = resp.data.choices?.[0]?.message?.content || '';
+    content = content
+      .trim()
+      .replace(/^```(?:json)?\r?\n/, '')
+      .replace(/\r?\n```$/, '');
+
+    detected = JSON.parse(content);
+    if (!Array.isArray(detected)) detected = [];
+  } catch (err) {
+    console.error('DeepSeek API error:', err.response?.status, err.message);
+  }
+
+  // 4) Filtra tus productos por keywords detectados
   try {
     let products = await Product.find();
     if (detected.length) {
       const lowered = detected.map(k => k.toLowerCase());
       products = products.filter(p =>
-        Array.isArray(p.keywords) && p.keywords.some(kw => lowered.includes(String(kw).toLowerCase()))
+        Array.isArray(p.keywords) &&
+        p.keywords.some(kw => lowered.includes(kw.toLowerCase()))
       );
     }
-    res.json(products);
+    return res.json(products);
   } catch (err) {
     console.error('Error suggesting products:', err);
-    res.status(500).json({ error: 'Failed to fetch products' });
+    return res.status(500).json({ error: 'Failed to fetch products' });
   }
-});
+});  // <- Cierre correcto de POST /packages/suggested
+
 
 app.get('/products/:id/image', async (req, res) => {
   try {
