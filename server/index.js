@@ -13,6 +13,7 @@ const Config = require('./DB/config');
 const Product = require('./DB/productos');
 const Package = require('./DB/packages');
 const Disease = require('./DB/diseases');
+const Testimonial = require('./DB/testimonials');
 
 const app = express();
 app.use(cors());
@@ -23,9 +24,16 @@ if (!fs.existsSync(imageCacheDir)) {
 }
 app.use('/images', express.static(imageCacheDir));
 
+const videoCacheDir = path.join(__dirname, 'video_cache');
+if (!fs.existsSync(videoCacheDir)) {
+  fs.mkdirSync(videoCacheDir, { recursive: true });
+}
+app.use('/videos', express.static(videoCacheDir));
+
 // Carga de credenciales de Google Drive
 const serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
 let driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID || null;
+let testimonialsFolderId = process.env.GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID || null;
 let drive;
 
 if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
@@ -46,13 +54,17 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(async () => {
   console.log('✅ MongoDB connected');
 
-  // Carga desde la DB el driveFolderId si existe
+  // Carga desde la DB el driveFolderId y testimonialsFolderId si existen
   const cfg = await Config.findOne();
   if (cfg && cfg.driveFolderId) {
     driveFolderId = cfg.driveFolderId;
     console.log(`🗂️  Drive folder cargado desde DB. Folder ID: ${driveFolderId}`);
   } else {
     console.warn('⚠️ Google Drive configurado pero NO hay carpeta. Usa POST /config/drive-folder para establecerla.');
+  }
+  if (cfg && cfg.testimonialsFolderId) {
+    testimonialsFolderId = cfg.testimonialsFolderId;
+    console.log(`🗂️  Testimonials folder cargado desde DB. Folder ID: ${testimonialsFolderId}`);
   }
 
   // Si tenemos drive y carpeta, compartimos la carpeta con la cuenta de servicio
@@ -71,6 +83,24 @@ mongoose.connect(process.env.MONGODB_URI, {
       console.log(`✅ Carpeta ${driveFolderId} compartida con ${serviceEmail} como Editor`);
     } catch (err) {
       console.warn('⚠️ No se pudo compartir la carpeta con la cuenta de servicio:', err.message);
+    }
+  }
+
+  if (drive && testimonialsFolderId && serviceAccountPath) {
+    try {
+      const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+      const serviceEmail = creds.client_email;
+      await drive.permissions.create({
+        fileId: testimonialsFolderId,
+        requestBody: {
+          role: 'writer',
+          type: 'user',
+          emailAddress: serviceEmail
+        }
+      });
+      console.log(`✅ Carpeta ${testimonialsFolderId} compartida con ${serviceEmail} como Editor`);
+    } catch (err) {
+      console.warn('⚠️ No se pudo compartir la carpeta de testimonios con la cuenta de servicio:', err.message);
     }
   }
 })
@@ -124,6 +154,46 @@ app.post('/config/drive-folder', async (req, res) => {
 // Obtener carpeta actual de Drive
 app.get('/config/drive-folder', (req, res) => {
   res.json({ folderId: driveFolderId });
+});
+
+// Configurar carpeta de Drive para testimonios
+app.post('/config/testimonials-folder', async (req, res) => {
+  const { folderId } = req.body;
+  if (!folderId || typeof folderId !== 'string') {
+    return res.status(400).json({ error: 'Folder ID required' });
+  }
+  try {
+    const cfg = await Config.findOneAndUpdate(
+      {},
+      { testimonialsFolderId: folderId },
+      { new: true, upsert: true }
+    );
+    testimonialsFolderId = cfg.testimonialsFolderId;
+
+    if (drive && serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+      try {
+        const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+        const serviceEmail = creds.client_email;
+        await drive.permissions.create({
+          fileId: testimonialsFolderId,
+          requestBody: { role: 'writer', type: 'user', emailAddress: serviceEmail }
+        });
+        console.log(`✅ Carpeta ${testimonialsFolderId} compartida con ${serviceEmail} como Editor`);
+      } catch (err) {
+        console.warn('⚠️ No se pudo compartir la carpeta de testimonios con la cuenta de servicio:', err.message);
+        return res.status(500).json({ error: 'Failed to share folder with service account', details: err.message });
+      }
+    }
+
+    res.json({ message: 'Testimonials folder configured', folderId: testimonialsFolderId });
+  } catch (err) {
+    console.error('Error saving testimonials folder config:', err);
+    res.status(500).json({ error: 'Failed to save config' });
+  }
+});
+
+app.get('/config/testimonials-folder', (req, res) => {
+  res.json({ folderId: testimonialsFolderId });
 });
 
 // Obtener el email de la cuenta de servicio
@@ -323,6 +393,85 @@ function deleteLocalImage(fileId) {
         fs.unlinkSync(path.join(imageCacheDir, f));
       } catch (err) {
         console.error('Error deleting cached image:', err.message);
+      }
+    }
+  });
+}
+
+// ----- Video helpers -----
+async function uploadVideo(dataUrl, parentId = testimonialsFolderId) {
+  if (!drive) throw new Error('Google Drive not configured');
+
+  const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
+  if (!match) throw new Error('Invalid video data');
+  const mimeType = match[1];
+  const buffer = Buffer.from(match[2], 'base64');
+
+  const bufferStream = new Readable({
+    read() {
+      this.push(buffer);
+      this.push(null);
+    }
+  });
+
+  const fileMetadata = {
+    name: `testimonial-${Date.now()}`,
+    mimeType,
+    ...(parentId ? { parents: [parentId] } : {})
+  };
+
+  const response = await drive.files.create({
+    requestBody: fileMetadata,
+    media: { mimeType, body: bufferStream },
+    fields: 'id'
+  });
+
+  const fileId = response.data.id;
+  await drive.permissions.create({ fileId, requestBody: { role: 'reader', type: 'anyone' } });
+
+  return { url: `https://drive.google.com/uc?id=${fileId}`, fileId };
+}
+
+async function deleteVideoFromDrive(fileId) {
+  if (!drive || !fileId) return;
+  try {
+    await drive.files.delete({ fileId });
+  } catch (err) {
+    console.error('Error deleting video from Drive:', err.message);
+  }
+}
+
+async function getLocalVideo(fileId) {
+  if (!fileId) return null;
+  const existing = fs.readdirSync(videoCacheDir).find(f => f.startsWith(`${fileId}.`));
+  if (existing) return `/videos/${existing}`;
+  if (!drive) return null;
+  try {
+    const meta = await drive.files.get({ fileId, fields: 'mimeType' });
+    const mime = meta.data.mimeType || '';
+    const ext = mime.split('/').pop() || 'mp4';
+    const filePath = path.join(videoCacheDir, `${fileId}.${ext}`);
+    const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
+    await new Promise((resolve, reject) => {
+      const dest = fs.createWriteStream(filePath);
+      driveRes.data.on('error', reject).pipe(dest);
+      dest.on('finish', resolve).on('error', reject);
+    });
+    return `/videos/${fileId}.${ext}`;
+  } catch (err) {
+    console.error('Error downloading video:', err.message);
+    return null;
+  }
+}
+
+function deleteLocalVideo(fileId) {
+  if (!fileId) return;
+  fs.readdirSync(videoCacheDir).forEach(f => {
+    if (f.startsWith(`${fileId}.`)) {
+      try {
+        fs.unlinkSync(path.join(videoCacheDir, f));
+      } catch (err) {
+        console.error('Error deleting cached video:', err.message);
       }
     }
   });
@@ -784,6 +933,107 @@ app.post('/diseases/recommend-package', async (req, res) => {
   } catch (err) {
     console.error('Error recommending package:', err);
     res.status(500).json({ error: 'Failed to recommend package' });
+  }
+});
+
+// ----- CRUD de testimonios -----
+app.get('/testimonials', async (req, res) => {
+  try {
+    const list = await Testimonial.find();
+    const populated = await Promise.all(
+      list.map(async t => {
+        const fileId = t.fileId || extractFileId(t.video);
+        const localVideo = await getLocalVideo(fileId);
+        return { ...t.toObject(), localVideo };
+      })
+    );
+    res.json(populated);
+  } catch (err) {
+    console.error('Error fetching testimonials:', err);
+    res.status(500).json({ error: 'Failed to fetch testimonials' });
+  }
+});
+
+app.post('/testimonials', async (req, res) => {
+  try {
+    if (
+      req.body.video &&
+      typeof req.body.video === 'string' &&
+      req.body.video.startsWith('data:')
+    ) {
+      const parentId = req.body.subfolderId || testimonialsFolderId;
+      const uploaded = await uploadVideo(req.body.video, parentId);
+      req.body.video = uploaded.url;
+      req.body.fileId = uploaded.fileId;
+    }
+    const testimonial = new Testimonial(req.body);
+    await testimonial.save();
+    const localVideo = await getLocalVideo(testimonial.fileId || extractFileId(testimonial.video));
+    res.status(201).json({ ...testimonial.toObject(), localVideo });
+  } catch (err) {
+    console.error('Error creating testimonial:', err);
+    res.status(400).json({ error: 'Failed to create testimonial', details: err.message });
+  }
+});
+
+app.put('/testimonials/:id', async (req, res) => {
+  try {
+    const existing = await Testimonial.findById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Testimonial not found' });
+
+    const updateData = { name: req.body.name, associatedProducts: req.body.associatedProducts };
+    if (req.body.subfolderId !== undefined) updateData.subfolderId = req.body.subfolderId;
+
+    if (
+      req.body.video &&
+      typeof req.body.video === 'string' &&
+      req.body.video.startsWith('data:')
+    ) {
+      if (existing.fileId) await deleteVideoFromDrive(existing.fileId);
+      const parentId = req.body.subfolderId || existing.subfolderId || testimonialsFolderId;
+      const uploaded = await uploadVideo(req.body.video, parentId);
+      updateData.video = uploaded.url;
+      updateData.fileId = uploaded.fileId;
+    } else if (req.body.video !== undefined) {
+      updateData.video = req.body.video;
+    }
+
+    const updated = await Testimonial.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    const localVideo = await getLocalVideo(updated.fileId || extractFileId(updated.video));
+    res.json({ ...updated.toObject(), localVideo });
+  } catch (err) {
+    console.error('Error updating testimonial:', err);
+    res.status(400).json({ error: 'Failed to update testimonial', details: err.message });
+  }
+});
+
+app.delete('/testimonials/:id', async (req, res) => {
+  try {
+    const t = await Testimonial.findByIdAndDelete(req.params.id);
+    if (!t) return res.status(404).json({ error: 'Testimonial not found' });
+    const fileId = t.fileId || extractFileId(t.video);
+    await deleteVideoFromDrive(fileId);
+    deleteLocalVideo(fileId);
+    res.json({ message: 'Testimonial deleted' });
+  } catch (err) {
+    console.error('Error deleting testimonial:', err);
+    res.status(400).json({ error: 'Failed to delete testimonial', details: err.message });
+  }
+});
+
+app.get('/testimonials/:id/video', async (req, res) => {
+  try {
+    const t = await Testimonial.findById(req.params.id);
+    if (!t) return res.status(404).json({ error: 'Testimonial not found' });
+    const fileId = t.fileId || extractFileId(t.video);
+    if (!fileId) return res.status(404).json({ error: 'Video not available' });
+    if (!drive) return res.status(500).json({ error: 'Drive not configured' });
+    const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
+    res.setHeader('Content-Type', driveRes.headers['content-type'] || 'application/octet-stream');
+    driveRes.data.pipe(res);
+  } catch (err) {
+    console.error('Error streaming video:', err);
+    res.status(500).json({ error: 'Failed to fetch video' });
   }
 });
 

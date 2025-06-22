@@ -36,6 +36,8 @@ GOOGLE_SERVICE_ACCOUNT_PATH=<path_to_service_account_json>
 # Optional default folder where product images will be uploaded
 # If not provided, the folder can be configured at runtime from the UI
 GOOGLE_DRIVE_FOLDER_ID=<drive_folder_id>
+# Optional folder for testimonial videos
+GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID=<drive_folder_id>
 ```
 
 `REACT_APP_API_URL` configures the base URL for API requests. If omitted, the
@@ -71,10 +73,11 @@ The backend API lives in the `server/` folder. To run it locally you need Node.j
 dependencies installed and a MongoDB instance running. Set the `MONGODB_URI`
 environment variable if you want to use a custom database URL. Drive uploads
 require `GOOGLE_SERVICE_ACCOUNT_PATH` pointing to your service account JSON file
-and you may optionally define `GOOGLE_DRIVE_FOLDER_ID` to select a default
-destination folder. If this variable is omitted, the folder can be selected
-through the application and sent to the backend using the new configuration
-endpoint.
+and you may optionally define `GOOGLE_DRIVE_FOLDER_ID` and
+`GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID` to select default upload folders for
+product images and testimonial videos. If these variables are omitted, the
+folders can be selected through the application and sent to the backend using
+the configuration endpoints.
 
 ### Subfolders
 
@@ -110,4 +113,26 @@ GET /products/:id/image
 It streams the file from Drive using the stored `fileId` (or extracting the ID
 from the `image` field if `fileId` is missing). The response includes the proper
 `Content-Type` header so it can be used directly as the `src` of an `<img>` tag.
+
+### Testimonial videos
+
+Testimonials are stored in their own collection and accept an uploaded video or
+a direct URL. Videos uploaded as Base64 data are stored in the Drive folder
+configured via the `/config/testimonials-folder` endpoint. The local server keeps
+a cached copy under `server/video_cache` and exposes it under `/videos`.
+
+New API routes:
+
+```http
+POST   /testimonials
+GET    /testimonials
+PUT    /testimonials/:id
+DELETE /testimonials/:id
+GET    /testimonials/:id/video  # Streams the file from Drive
+```
+
+Environment variable `GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID` can define the
+default upload folder. The folder ID may also be configured at runtime via the
+`POST /config/testimonials-folder` endpoint and queried with
+`GET /config/testimonials-folder`.
 
