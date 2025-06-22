@@ -7,6 +7,7 @@ function Testimonials() {
   const [testimonials, setTestimonials] = useState([]);
   const [products, setProducts] = useState([]);
   const [subfolders, setSubfolders] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -78,6 +79,7 @@ function Testimonials() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setIsSaving(true);
     fetch(`${API_URL}/testimonials`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -91,10 +93,14 @@ function Testimonials() {
       .then(res => res.json())
       .then(data => {
         setTestimonials(prev => [...prev, data]);
+        setIsSaving(false);
         alert('Testimonio guardado exitosamente');
         closeModal();
       })
-      .catch(err => console.error('Failed to create testimonial', err));
+      .catch(err => {
+        console.error('Failed to create testimonial', err);
+        setIsSaving(false);
+      });
   };
 
   const deleteTestimonial = (testimonialId) => {
@@ -324,10 +330,17 @@ function Testimonials() {
                   </button>
                   <button
                     type="submit"
-                    disabled={!formData.videoUrl || formData.associatedProducts.length === 0}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSaving || !formData.videoUrl || formData.associatedProducts.length === 0}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
-                    Subir Testimonio
+                    {isSaving ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+                        <span>Guardando...</span>
+                      </>
+                    ) : (
+                      <>Subir Testimonio</>
+                    )}
                   </button>
                 </div>
               </form>
