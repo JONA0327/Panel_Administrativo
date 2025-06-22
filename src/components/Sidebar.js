@@ -7,6 +7,7 @@ function Sidebar({ currentView, setCurrentView }) {
     { name: 'Paquetes', icon: '🎁' },
     { name: 'Índice de Enfermedades', icon: '🏥' },
     { name: 'Testimonios', icon: '💬' },
+    { name: 'Actividades', icon: '📋' },
     { name: 'BD', icon: '🗄️' },
     { name: 'Configuración', icon: '⚙️' },
   ];

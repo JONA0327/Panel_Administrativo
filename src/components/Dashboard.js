@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
-function Dashboard({ onAddProduct, onAddPackage, onAddTestimonial }) {
+function Dashboard({ onAddProduct, onAddPackage, onAddTestimonial, onViewActivities }) {
   const [stats, setStats] = useState({
     productCount: 0,
     packageCount: 0,
@@ -55,7 +55,7 @@ function Dashboard({ onAddProduct, onAddPackage, onAddTestimonial }) {
   const [activities, setActivities] = useState([]);
 
   useEffect(() => {
-    fetch(`${API_URL}/activities?limit=10`)
+    fetch(`${API_URL}/activities?limit=5`)
       .then(res => res.json())
       .then(setActivities)
       .catch(err => console.error('Error fetching activities:', err));
@@ -112,7 +112,10 @@ function Dashboard({ onAddProduct, onAddPackage, onAddTestimonial }) {
                 </div>
               ))}
             </div>
-            <button className="w-full mt-4 text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors">
+            <button
+              onClick={onViewActivities}
+              className="w-full mt-4 text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors"
+            >
               Ver toda la actividad →
             </button>
           </div>
