@@ -4,6 +4,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
 function Testimonials() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTestimonial, setEditingTestimonial] = useState(null);
   const [testimonials, setTestimonials] = useState([]);
   const [products, setProducts] = useState([]);
   const [subfolders, setSubfolders] = useState([]);
@@ -77,28 +78,59 @@ function Testimonials() {
     });
   };
 
+  const openEditModal = (testimonial) => {
+    setEditingTestimonial(testimonial);
+    setFormData({
+      name: testimonial.name || '',
+      associatedProducts: Array.isArray(testimonial.associatedProducts)
+        ? testimonial.associatedProducts
+        : [],
+      videoUrl: testimonial.video || '',
+      videoFile: null,
+      subfolderId: testimonial.subfolderId || ''
+    });
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsSaving(true);
-    fetch(`${API_URL}/testimonials`, {
-      method: 'POST',
+    const payload = {
+      name: formData.name,
+      associatedProducts: formData.associatedProducts,
+      video: formData.videoUrl,
+      subfolderId: formData.subfolderId || undefined
+    };
+
+    const url = editingTestimonial
+      ? `${API_URL}/testimonials/${editingTestimonial._id}`
+      : `${API_URL}/testimonials`;
+    const method = editingTestimonial ? 'PUT' : 'POST';
+
+    fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: formData.name,
-        associatedProducts: formData.associatedProducts,
-        video: formData.videoUrl,
-        subfolderId: formData.subfolderId || undefined
-      })
+      body: JSON.stringify(payload)
     })
       .then(res => res.json())
       .then(data => {
-        setTestimonials(prev => [...prev, data]);
+        if (editingTestimonial) {
+          setTestimonials(prev =>
+            prev.map(t => (t._id === data._id ? data : t))
+          );
+        } else {
+          setTestimonials(prev => [...prev, data]);
+        }
         setIsSaving(false);
-        alert('Testimonio guardado exitosamente');
         closeModal();
       })
       .catch(err => {
-        console.error('Failed to create testimonial', err);
+        console.error(
+          editingTestimonial
+            ? 'Failed to update testimonial'
+            : 'Failed to create testimonial',
+          err
+        );
         setIsSaving(false);
       });
   };
@@ -115,6 +147,7 @@ function Testimonials() {
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setEditingTestimonial(null);
     setFormData({
       name: '',
       associatedProducts: [],
@@ -138,7 +171,10 @@ function Testimonials() {
             </p>
           </div>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setEditingTestimonial(null);
+              setIsModalOpen(true);
+            }}
             className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 flex items-center space-x-2"
           >
             <span className="text-lg">➕</span>
@@ -175,10 +211,13 @@ function Testimonials() {
                   </div>
                 </div>
                 <div className="flex justify-end space-x-2 pt-2">
-                  <button className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+                  <button
+                    onClick={() => openEditModal(testimonial)}
+                    className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                  >
                     Editar
                   </button>
-                  <button 
+                  <button
                     onClick={() => deleteTestimonial(testimonial._id)}
                     className="text-red-600 hover:text-red-700 font-medium text-sm"
                   >
@@ -196,7 +235,7 @@ function Testimonials() {
             <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-slate-200">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold text-slate-800">Subir Nuevo Testimonio</h2>
+                  <h2 className="text-2xl font-bold text-slate-800">{editingTestimonial ? 'Editar Testimonio' : 'Subir Nuevo Testimonio'}</h2>
                   <button
                     onClick={closeModal}
                     className="text-slate-400 hover:text-slate-600 text-2xl"
@@ -339,7 +378,7 @@ function Testimonials() {
                         <span>Guardando...</span>
                       </>
                     ) : (
-                      <>Subir Testimonio</>
+                      <>{editingTestimonial ? 'Guardar Cambios' : 'Subir Testimonio'}</>
                     )}
                   </button>
                 </div>
