@@ -5,6 +5,7 @@ import Products from './components/Products';
 import Packages from './components/Packages';
 import Diseases from './components/Diseases';
 import Testimonials from './components/Testimonials';
+import Database from './components/Database';
 import Settings from './components/Settings';
 
 function App() {
@@ -22,6 +23,8 @@ function App() {
         return <Diseases />;
       case 'Testimonios':
         return <Testimonials />;
+      case 'BD':
+        return <Database />;
       case 'Configuración':
         return <Settings />;
       default:

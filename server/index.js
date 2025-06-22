@@ -106,6 +106,126 @@ mongoose.connect(process.env.MONGODB_URI, {
 })
 .catch(err => console.error('❌ MongoDB connection error:', err));
 
+// ===== NUEVAS RUTAS PARA GESTIÓN DE BASE DE DATOS =====
+
+// Obtener lista de colecciones
+app.get('/database/collections', async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    const collections = await db.listCollections().toArray();
+    
+    const collectionsWithStats = await Promise.all(
+      collections.map(async (collection) => {
+        try {
+          const stats = await db.collection(collection.name).stats();
+          return {
+            name: collection.name,
+            count: stats.count || 0,
+            size: stats.size || 0,
+            avgObjSize: stats.avgObjSize || 0
+          };
+        } catch (err) {
+          return {
+            name: collection.name,
+            count: 0,
+            size: 0,
+            avgObjSize: 0
+          };
+        }
+      })
+    );
+
+    res.json(collectionsWithStats);
+  } catch (err) {
+    console.error('Error fetching collections:', err);
+    res.status(500).json({ error: 'Failed to fetch collections' });
+  }
+});
+
+// Obtener estadísticas de la base de datos
+app.get('/database/stats', async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    const stats = await db.stats();
+    res.json({
+      dataSize: stats.dataSize || 0,
+      storageSize: stats.storageSize || 0,
+      indexSize: stats.indexSize || 0,
+      collections: stats.collections || 0,
+      objects: stats.objects || 0
+    });
+  } catch (err) {
+    console.error('Error fetching database stats:', err);
+    res.status(500).json({ error: 'Failed to fetch database stats' });
+  }
+});
+
+// Obtener datos de una colección específica
+app.get('/database/collections/:name/data', async (req, res) => {
+  try {
+    const { name } = req.params;
+    const db = mongoose.connection.db;
+    const collection = db.collection(name);
+    
+    // Limitar a 50 documentos para evitar sobrecarga
+    const documents = await collection.find({}).limit(50).toArray();
+    res.json(documents);
+  } catch (err) {
+    console.error('Error fetching collection data:', err);
+    res.status(500).json({ error: 'Failed to fetch collection data' });
+  }
+});
+
+// Eliminar una colección
+app.delete('/database/collections/:name', async (req, res) => {
+  try {
+    const { name } = req.params;
+    const db = mongoose.connection.db;
+    
+    // Verificar que la colección existe
+    const collections = await db.listCollections({ name }).toArray();
+    if (collections.length === 0) {
+      return res.status(404).json({ error: 'Collection not found' });
+    }
+    
+    await db.collection(name).drop();
+    res.json({ message: `Collection ${name} deleted successfully` });
+  } catch (err) {
+    console.error('Error deleting collection:', err);
+    res.status(500).json({ error: 'Failed to delete collection' });
+  }
+});
+
+// Crear respaldo de la base de datos
+app.post('/database/backup', async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    const collections = await db.listCollections().toArray();
+    
+    const backup = {
+      timestamp: new Date().toISOString(),
+      database: db.databaseName,
+      collections: {}
+    };
+    
+    // Exportar cada colección
+    for (const collection of collections) {
+      const collectionName = collection.name;
+      const documents = await db.collection(collectionName).find({}).toArray();
+      backup.collections[collectionName] = documents;
+    }
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="database-backup-${new Date().toISOString().split('T')[0]}.json"`);
+    res.json(backup);
+  } catch (err) {
+    console.error('Error creating backup:', err);
+    res.status(500).json({ error: 'Failed to create backup' });
+  }
+});
+
+// ===== FIN DE RUTAS DE BASE DE DATOS =====
+
 // Endpoint para configurar carpeta de Drive
 app.post('/config/drive-folder', async (req, res) => {
   const { folderId } = req.body;
