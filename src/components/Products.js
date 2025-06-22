@@ -11,6 +11,7 @@ const Products = forwardRef((props, ref) => {
 
   // Product to show in the description modal
   const [infoProduct, setInfoProduct] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -224,6 +225,7 @@ const Products = forwardRef((props, ref) => {
 const handleSubmit = (e) => {
   e.preventDefault();
   setSubmitError(null); // Limpia cualquier error previo
+  setIsSaving(true);
 
   fetch(`${API_URL}/products`, {
     method: 'POST',
@@ -246,18 +248,22 @@ const handleSubmit = (e) => {
     .then(product => {
       // Almacena el nuevo producto y cierra el modal
       setProducts(prev => [...prev, product]);
+      setIsSaving(false);
+      alert('Producto agregado');
       closeModal();
     })
     .catch(err => {
       console.error('Failed to create product:', err);
       setSubmitError(err.message); // Muestra el mensaje devuelto por el backend
+      setIsSaving(false);
     });
 };
 
-  const handleUpdate = (e) => {
-    e.preventDefault();
-    if (!editingProduct) return;
-    setSubmitError(null);
+const handleUpdate = (e) => {
+  e.preventDefault();
+  if (!editingProduct) return;
+  setSubmitError(null);
+  setIsSaving(true);
 
     const payload = {
       suggestedInfo: formData.suggestedInfo,
@@ -284,13 +290,16 @@ const handleSubmit = (e) => {
       })
       .then(updated => {
         setProducts(prev => prev.map(p => (p._id === updated._id ? updated : p)));
+        setIsSaving(false);
+        alert('Producto actualizado');
         closeModal();
       })
       .catch(err => {
         console.error('Failed to update product:', err);
         setSubmitError(err.message);
+        setIsSaving(false);
       });
-  };
+};
 
   const deleteProduct = (productId) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
@@ -647,9 +656,17 @@ const handleSubmit = (e) => {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                    disabled={isSaving}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
-                    Crear Producto
+                    {isSaving ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+                        <span>Guardando...</span>
+                      </>
+                    ) : (
+                      <>Crear Producto</>
+                    )}
                   </button>
                 </div>
               </form>
@@ -850,9 +867,17 @@ const handleSubmit = (e) => {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                    disabled={isSaving}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
-                    Guardar Cambios
+                    {isSaving ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+                        <span>Guardando...</span>
+                      </>
+                    ) : (
+                      <>Guardar Cambios</>
+                    )}
                   </button>
                 </div>
               </form>
