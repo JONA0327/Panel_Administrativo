@@ -96,18 +96,6 @@ function Dashboard() {
 
         {/* Content Grid */}
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Chart Placeholder */}
-          <div className="lg:col-span-2 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-            <h2 className="text-xl font-semibold text-slate-800 mb-6">Análisis de Ventas</h2>
-            <div className="h-64 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl flex items-center justify-center border-2 border-dashed border-purple-200">
-              <div className="text-center">
-                <div className="text-4xl mb-2">📊</div>
-                <p className="text-slate-600 font-medium">Gráfico de ventas</p>
-                <p className="text-sm text-slate-500">Los datos se cargarán aquí</p>
-              </div>
-            </div>
-          </div>
-
           {/* Recent Activity */}
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
             <h2 className="text-xl font-semibold text-slate-800 mb-6">Actividad Reciente</h2>
