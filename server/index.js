@@ -41,18 +41,37 @@ app.use('/videos', express.static(videoCacheDir));
 
 // Carga de credenciales de Google Drive
 const serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
+const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+let serviceAccountCredentials = null;
+let serviceAccountEmail = null;
 let driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID || null;
 let testimonialsFolderId = process.env.GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID || null;
 let drive;
 
-if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+if (serviceAccountJson) {
+  try {
+    serviceAccountCredentials = JSON.parse(serviceAccountJson);
+    serviceAccountEmail = serviceAccountCredentials.client_email;
+  } catch (err) {
+    console.error('❌ Error parsing GOOGLE_SERVICE_ACCOUNT_JSON:', err.message);
+  }
+} else if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+  try {
+    serviceAccountCredentials = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+    serviceAccountEmail = serviceAccountCredentials.client_email;
+  } catch (err) {
+    console.error('❌ Error reading Google service account file:', err.message);
+  }
+}
+
+if (serviceAccountCredentials) {
   const auth = new google.auth.GoogleAuth({
-    keyFile: serviceAccountPath,
+    credentials: serviceAccountCredentials,
     scopes: ['https://www.googleapis.com/auth/drive']
   });
   drive = google.drive({ version: 'v3', auth });
 } else {
-  console.warn('⚠️ No se encontró el archivo de credenciales de Google Drive. Revisa GOOGLE_SERVICE_ACCOUNT_PATH.');
+  console.warn('⚠️ No se encontró el archivo o JSON de credenciales de Google Drive. Revisa GOOGLE_SERVICE_ACCOUNT_PATH o GOOGLE_SERVICE_ACCOUNT_JSON.');
 }
 
 // Conexión a MongoDB y carga inicial de configuración
@@ -77,37 +96,33 @@ mongoose.connect(process.env.MONGODB_URI, {
   }
 
   // Si tenemos drive y carpeta, compartimos la carpeta con la cuenta de servicio
-  if (drive && driveFolderId && serviceAccountPath) {
+  if (drive && driveFolderId && serviceAccountEmail) {
     try {
-      const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-      const serviceEmail = creds.client_email;
       await drive.permissions.create({
         fileId: driveFolderId,
         requestBody: {
           role: 'writer',
           type: 'user',
-          emailAddress: serviceEmail
+          emailAddress: serviceAccountEmail
         }
       });
-      console.log(`✅ Carpeta ${driveFolderId} compartida con ${serviceEmail} como Editor`);
+      console.log(`✅ Carpeta ${driveFolderId} compartida con ${serviceAccountEmail} como Editor`);
     } catch (err) {
       console.warn('⚠️ No se pudo compartir la carpeta con la cuenta de servicio:', err.message);
     }
   }
 
-  if (drive && testimonialsFolderId && serviceAccountPath) {
+  if (drive && testimonialsFolderId && serviceAccountEmail) {
     try {
-      const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-      const serviceEmail = creds.client_email;
       await drive.permissions.create({
         fileId: testimonialsFolderId,
         requestBody: {
           role: 'writer',
           type: 'user',
-          emailAddress: serviceEmail
+          emailAddress: serviceAccountEmail
         }
       });
-      console.log(`✅ Carpeta ${testimonialsFolderId} compartida con ${serviceEmail} como Editor`);
+      console.log(`✅ Carpeta ${testimonialsFolderId} compartida con ${serviceAccountEmail} como Editor`);
     } catch (err) {
       console.warn('⚠️ No se pudo compartir la carpeta de testimonios con la cuenta de servicio:', err.message);
     }
@@ -303,19 +318,17 @@ app.post('/config/drive-folder', async (req, res) => {
     console.log(`🗂️  Drive folder actualizado. Nuevo Folder ID: ${driveFolderId}`);
 
     // Compartir la carpeta con la cuenta de servicio inmediatamente
-    if (drive && serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+    if (drive && serviceAccountEmail) {
       try {
-        const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-        const serviceEmail = creds.client_email;
         await drive.permissions.create({
           fileId: driveFolderId,
           requestBody: {
             role: 'writer',
             type: 'user',
-            emailAddress: serviceEmail
+            emailAddress: serviceAccountEmail
           }
         });
-        console.log(`✅ Carpeta ${driveFolderId} compartida con ${serviceEmail} como Editor`);
+        console.log(`✅ Carpeta ${driveFolderId} compartida con ${serviceAccountEmail} como Editor`);
       } catch (err) {
         console.warn('⚠️ No se pudo compartir la carpeta con la cuenta de servicio:', err.message);
         return res.status(500).json({
@@ -352,15 +365,13 @@ app.post('/config/testimonials-folder', async (req, res) => {
     );
     testimonialsFolderId = cfg.testimonialsFolderId;
 
-    if (drive && serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+    if (drive && serviceAccountEmail) {
       try {
-        const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-        const serviceEmail = creds.client_email;
         await drive.permissions.create({
           fileId: testimonialsFolderId,
-          requestBody: { role: 'writer', type: 'user', emailAddress: serviceEmail }
+          requestBody: { role: 'writer', type: 'user', emailAddress: serviceAccountEmail }
         });
-        console.log(`✅ Carpeta ${testimonialsFolderId} compartida con ${serviceEmail} como Editor`);
+        console.log(`✅ Carpeta ${testimonialsFolderId} compartida con ${serviceAccountEmail} como Editor`);
       } catch (err) {
         console.warn('⚠️ No se pudo compartir la carpeta de testimonios con la cuenta de servicio:', err.message);
         return res.status(500).json({ error: 'Failed to share folder with service account', details: err.message });
@@ -381,16 +392,10 @@ app.get('/config/testimonials-folder', (req, res) => {
 
 // Obtener el email de la cuenta de servicio
 app.get('/config/service-account', (req, res) => {
-  if (!serviceAccountPath || !fs.existsSync(serviceAccountPath)) {
+  if (!serviceAccountEmail) {
     return res.status(404).json({ error: 'Service account not configured' });
   }
-  try {
-    const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-    return res.json({ email: creds.client_email || null });
-  } catch (err) {
-    console.error('Error reading service account credentials:', err);
-    return res.status(500).json({ error: 'Failed to read service account' });
-  }
+  return res.json({ email: serviceAccountEmail });
 });
 
 // Crear subcarpeta en la carpeta principal de Drive
@@ -415,16 +420,14 @@ app.post('/config/subfolders', async (req, res) => {
     const folderId = response.data.id;
 
     // Compartir la subcarpeta con la cuenta de servicio
-    if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+    if (serviceAccountEmail) {
       try {
-        const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-        const serviceEmail = creds.client_email;
         await drive.permissions.create({
           fileId: folderId,
           requestBody: {
             role: 'writer',
             type: 'user',
-            emailAddress: serviceEmail
+            emailAddress: serviceAccountEmail
           }
         });
       } catch (err) {
