@@ -1,6 +1,4 @@
-import React, { useEffect, useState } from 'react';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+import React from 'react';
 
 function Sidebar({ currentView, setCurrentView }) {
   const entries = [
@@ -14,19 +12,7 @@ function Sidebar({ currentView, setCurrentView }) {
     { name: 'Configuración', icon: '⚙️' },
   ];
 
-  const [admin, setAdmin] = useState({ name: '', email: '' });
-
-  useEffect(() => {
-    fetch(`${API_URL}/config/settings`)
-      .then(res => res.json())
-      .then(data => {
-        setAdmin({
-          name: data?.adminName || '',
-          email: data?.adminEmail || ''
-        });
-      })
-      .catch(err => console.error('Failed to load admin info', err));
-  }, []);
+  const admin = { name: 'Admin', email: 'admin@medipanel.com' };
 
   return (
     <aside className="bg-white shadow-xl w-72 p-6 border-r border-gray-100">
