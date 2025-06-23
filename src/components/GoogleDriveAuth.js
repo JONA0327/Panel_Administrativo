@@ -141,7 +141,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
   };
 
   useEffect(() => {
-    fetch(`${API_URL}/config/subfolders`)
+    fetch(`${API_URL}config/subfolders`)
       .then((res) => res.json())
       .then(setSubfolders)
       .catch((err) => console.error("Failed to fetch subfolders", err));
