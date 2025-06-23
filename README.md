@@ -136,3 +136,15 @@ default upload folder. The folder ID may also be configured at runtime via the
 `POST /config/testimonials-folder` endpoint and queried with
 `GET /config/testimonials-folder`.
 
+### Production build
+
+Generate the optimized React bundle and let the Node server handle it:
+
+```bash
+npm run build
+NODE_ENV=production node server/index.js
+```
+
+When `NODE_ENV` is `production`, the server serves the files from the `build/`
+directory so the frontend and backend run together under the same process.
+
