@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
 function Sidebar({ currentView, setCurrentView }) {
   const entries = [
@@ -11,6 +13,20 @@ function Sidebar({ currentView, setCurrentView }) {
     { name: 'BD', icon: '🗄️' },
     { name: 'Configuración', icon: '⚙️' },
   ];
+
+  const [admin, setAdmin] = useState({ name: '', email: '' });
+
+  useEffect(() => {
+    fetch(`${API_URL}/config/settings`)
+      .then(res => res.json())
+      .then(data => {
+        setAdmin({
+          name: data?.adminName || '',
+          email: data?.adminEmail || ''
+        });
+      })
+      .catch(err => console.error('Failed to load admin info', err));
+  }, []);
 
   return (
     <aside className="bg-white shadow-xl w-72 p-6 border-r border-gray-100">
@@ -49,11 +65,11 @@ function Sidebar({ currentView, setCurrentView }) {
       <div className="mt-8 p-4 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl border border-purple-100">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-            <span className="text-white font-semibold">A</span>
+            <span className="text-white font-semibold">{(admin.name || 'A')[0]}</span>
           </div>
           <div>
-            <p className="font-semibold text-gray-800">Admin</p>
-            <p className="text-sm text-gray-500">admin@medipanel.com</p>
+            <p className="font-semibold text-gray-800">{admin.name || 'Admin'}</p>
+            <p className="text-sm text-gray-500">{admin.email}</p>
           </div>
         </div>
       </div>
