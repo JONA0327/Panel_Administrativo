@@ -9,7 +9,7 @@ function Settings() {
     siteName: 'MediPanel',
     adminName: '',
     adminEmail: 'admin@medipanel.com',
-    adminPassword: '',
+    password: '',
     autoBackup: true,
     emailNotifications: true,
     darkMode: false,
@@ -20,7 +20,8 @@ function Settings() {
     fetch(`${API_URL}/config/settings`)
       .then(res => res.json())
       .then(data => {
-        setSettings(prev => ({ ...prev, ...data }));
+        const { adminPassword, ...rest } = data || {};
+        setSettings(prev => ({ ...prev, ...rest, password: '' }));
       })
       .catch(err => console.error('Failed to load settings', err));
   }, []);
@@ -39,7 +40,7 @@ function Settings() {
       body: JSON.stringify({
         adminName: settings.adminName,
         adminEmail: settings.adminEmail,
-        adminPassword: settings.adminPassword
+        password: settings.password
       })
     })
       .then(res => res.json())
@@ -96,6 +97,19 @@ function Settings() {
                   type="email"
                   value={settings.adminEmail}
                   onChange={(e) => handleSettingChange('adminEmail', e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Contraseña
+                </label>
+                <input
+                  type="password"
+                  value={settings.password}
+                  onChange={(e) => handleSettingChange('password', e.target.value)}
                   className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
               </div>
