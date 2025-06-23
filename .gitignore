@@ -5,5 +5,4 @@ build/
 .env.test.local
 .env.production.local
 .env
-# Ignorar credenciales de Google
-server/credenciales/*.json
+
