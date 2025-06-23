@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
 const axios = require('axios');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const Config = require('./DB/config');
@@ -455,6 +456,42 @@ app.get('/config/subfolders', async (req, res) => {
   } catch (err) {
     console.error('Error fetching subfolders:', err);
     res.status(500).json({ error: 'Failed to fetch subfolders', details: err.message });
+  }
+});
+
+// Obtener y actualizar ajustes generales
+app.get('/config/settings', async (req, res) => {
+  try {
+    const cfg = await Config.findOne();
+    res.json({
+      adminName: cfg?.adminName || '',
+      adminEmail: cfg?.adminEmail || '',
+      adminPassword: cfg?.adminPassword || ''
+    });
+  } catch (err) {
+    console.error('Error fetching settings:', err);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+app.put('/config/settings', async (req, res) => {
+  const { adminName, adminEmail, adminPassword } = req.body || {};
+  try {
+    const update = {};
+    if (typeof adminName === 'string') update.adminName = adminName;
+    if (typeof adminEmail === 'string') update.adminEmail = adminEmail;
+    if (adminPassword) {
+      update.adminPassword = crypto
+        .createHash('sha256')
+        .update(adminPassword)
+        .digest('hex');
+    }
+    const cfg = await Config.findOneAndUpdate({}, update, { new: true, upsert: true });
+    await logActivity('Config updated', 'Settings updated');
+    res.json({ adminName: cfg.adminName, adminEmail: cfg.adminEmail });
+  } catch (err) {
+    console.error('Error updating settings:', err);
+    res.status(500).json({ error: 'Failed to update settings' });
   }
 });
 

@@ -1,16 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import GoogleDriveAuth from './GoogleDriveAuth';
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
 function Settings() {
   const [isDriveConnected, setIsDriveConnected] = useState(false);
   const [settings, setSettings] = useState({
     siteName: 'MediPanel',
+    adminName: '',
     adminEmail: 'admin@medipanel.com',
+    adminPassword: '',
     autoBackup: true,
     emailNotifications: true,
     darkMode: false,
     language: 'es'
   });
+
+  useEffect(() => {
+    fetch(`${API_URL}/config/settings`)
+      .then(res => res.json())
+      .then(data => {
+        setSettings(prev => ({ ...prev, ...data }));
+      })
+      .catch(err => console.error('Failed to load settings', err));
+  }, []);
 
   const handleSettingChange = (key, value) => {
     setSettings(prev => ({
@@ -20,8 +33,20 @@ function Settings() {
   };
 
   const handleSaveSettings = () => {
-    // Aquí guardarías la configuración
-    alert('Configuración guardada exitosamente');
+    fetch(`${API_URL}/config/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        adminName: settings.adminName,
+        adminEmail: settings.adminEmail,
+        adminPassword: settings.adminPassword
+      })
+    })
+      .then(res => res.json())
+      .then(() => {
+        alert('Configuración guardada exitosamente');
+      })
+      .catch(err => console.error('Failed to save settings', err));
   };
 
   return (
