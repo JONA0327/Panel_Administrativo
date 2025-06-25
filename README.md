@@ -33,6 +33,8 @@ REACT_APP_GOOGLE_API_KEY=<api_key>
 REACT_APP_API_URL=http://localhost:4000
 MONGODB_URI=<mongodb_uri>
 GOOGLE_SERVICE_ACCOUNT_PATH=<path_to_service_account_json>
+# Alternatively you can provide the JSON directly
+GOOGLE_SERVICE_ACCOUNT_JSON=<json_string>
 # Optional default folder where product images will be uploaded
 # If not provided, the folder can be configured at runtime from the UI
 GOOGLE_DRIVE_FOLDER_ID=<drive_folder_id>
@@ -50,7 +52,8 @@ You can query the current value using the `GET /config/drive-folder` endpoint.
 This allows the destination to be changed without updating `.env`.
 
 After configuring a new folder the backend automatically shares it with the
-service account defined by `GOOGLE_SERVICE_ACCOUNT_PATH`. A message similar to:
+service account defined by `GOOGLE_SERVICE_ACCOUNT_PATH` or `GOOGLE_SERVICE_ACCOUNT_JSON`.
+A message similar to:
 
 ```
 ✅ Carpeta <id> compartida con <service_email> como Editor
@@ -72,8 +75,8 @@ server so the new values are loaded.
 The backend API lives in the `server/` folder. To run it locally you need Node.js
 dependencies installed and a MongoDB instance running. Set the `MONGODB_URI`
 environment variable if you want to use a custom database URL. Drive uploads
-require `GOOGLE_SERVICE_ACCOUNT_PATH` pointing to your service account JSON file
-and you may optionally define `GOOGLE_DRIVE_FOLDER_ID` and
+require either `GOOGLE_SERVICE_ACCOUNT_PATH` pointing to your service account JSON file
+or `GOOGLE_SERVICE_ACCOUNT_JSON` with the credentials inline. You may optionally define `GOOGLE_DRIVE_FOLDER_ID` and
 `GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID` to select default upload folders for
 product images and testimonial videos. If these variables are omitted, the
 folders can be selected through the application and sent to the backend using
