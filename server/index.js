@@ -39,6 +39,8 @@ if (!fs.existsSync(videoCacheDir)) {
 }
 app.use('/videos', express.static(videoCacheDir));
 
+const USE_OAUTH_UPLOAD = process.env.USE_OAUTH_UPLOAD === 'true';
+
 // Carga de credenciales de Google Drive
 const serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
 const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
@@ -72,6 +74,19 @@ if (serviceAccountCredentials) {
   drive = google.drive({ version: 'v3', auth });
 } else {
   console.warn('⚠️ No se encontró el archivo o JSON de credenciales de Google Drive. Revisa GOOGLE_SERVICE_ACCOUNT_PATH o GOOGLE_SERVICE_ACCOUNT_JSON.');
+}
+
+function getDriveClient(req) {
+  if (USE_OAUTH_UPLOAD) {
+    const header = req?.headers?.authorization || '';
+    const m = header.match(/Bearer\s+(.+)/);
+    if (m) {
+      const oauth2 = new google.auth.OAuth2();
+      oauth2.setCredentials({ access_token: m[1] });
+      return google.drive({ version: 'v3', auth: oauth2 });
+    }
+  }
+  return drive;
 }
 
 // Conexión a MongoDB y carga inicial de configuración
@@ -464,8 +479,9 @@ app.get('/config/subfolders', async (req, res) => {
 
 
 // Función corregida para subir base64 a Drive usando Readable stream
-async function uploadImage(dataUrl, parentId = driveFolderId) {
-  if (!drive) throw new Error('Google Drive not configured');
+async function uploadImage(dataUrl, parentId = driveFolderId, req = null) {
+  const drv = getDriveClient(req);
+  if (!drv) throw new Error('Google Drive not configured');
 
   const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
   if (!match) throw new Error('Invalid image data');
@@ -485,7 +501,7 @@ async function uploadImage(dataUrl, parentId = driveFolderId) {
     ...(parentId ? { parents: [parentId] } : {})
   };
 
-  const response = await drive.files.create({
+  const response = await drv.files.create({
     requestBody: fileMetadata,
     media: { mimeType, body: bufferStream },
     fields: 'id',
@@ -493,7 +509,7 @@ async function uploadImage(dataUrl, parentId = driveFolderId) {
   });
 
   const fileId = response.data.id;
-  await drive.permissions.create({
+  await drv.permissions.create({
     fileId,
     requestBody: { role: 'reader', type: 'anyone' }
   });
@@ -509,17 +525,19 @@ function extractFileId(url) {
   return match ? match[1] : null;
 }
 
-async function deleteImageFromDrive(fileId) {
-  if (!drive || !fileId) return;
+async function deleteImageFromDrive(fileId, req = null) {
+  const drv = getDriveClient(req);
+  if (!drv || !fileId) return;
   try {
-    await drive.files.delete({ fileId, supportsAllDrives: true });
+    await drv.files.delete({ fileId, supportsAllDrives: true });
   } catch (err) {
     console.error('Error deleting image from Drive:', err.message);
   }
 }
 
-async function updateImageOnDrive(fileId, dataUrl) {
-  if (!drive || !fileId) throw new Error('Google Drive not configured');
+async function updateImageOnDrive(fileId, dataUrl, req = null) {
+  const drv = getDriveClient(req);
+  if (!drv || !fileId) throw new Error('Google Drive not configured');
 
   const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
   if (!match) throw new Error('Invalid image data');
@@ -533,7 +551,7 @@ async function updateImageOnDrive(fileId, dataUrl) {
     }
   });
 
-  await drive.files.update({
+  await drv.files.update({
     fileId,
     media: { mimeType, body: bufferStream },
     supportsAllDrives: true
@@ -590,8 +608,9 @@ function deleteLocalImage(fileId) {
 }
 
 // ----- Video helpers -----
-async function uploadVideo(dataUrl, parentId = testimonialsFolderId) {
-  if (!drive) throw new Error('Google Drive not configured');
+async function uploadVideo(dataUrl, parentId = testimonialsFolderId, req = null) {
+  const drv = getDriveClient(req);
+  if (!drv) throw new Error('Google Drive not configured');
 
   const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
   if (!match) throw new Error('Invalid video data');
@@ -611,7 +630,7 @@ async function uploadVideo(dataUrl, parentId = testimonialsFolderId) {
     ...(parentId ? { parents: [parentId] } : {})
   };
 
-  const response = await drive.files.create({
+  const response = await drv.files.create({
     requestBody: fileMetadata,
     media: { mimeType, body: bufferStream },
     fields: 'id',
@@ -619,15 +638,16 @@ async function uploadVideo(dataUrl, parentId = testimonialsFolderId) {
   });
 
   const fileId = response.data.id;
-  await drive.permissions.create({ fileId, requestBody: { role: 'reader', type: 'anyone' } });
+  await drv.permissions.create({ fileId, requestBody: { role: 'reader', type: 'anyone' } });
 
   return { url: `https://drive.google.com/uc?id=${fileId}`, fileId };
 }
 
-async function deleteVideoFromDrive(fileId) {
-  if (!drive || !fileId) return;
+async function deleteVideoFromDrive(fileId, req = null) {
+  const drv = getDriveClient(req);
+  if (!drv || !fileId) return;
   try {
-    await drive.files.delete({ fileId, supportsAllDrives: true });
+    await drv.files.delete({ fileId, supportsAllDrives: true });
   } catch (err) {
     console.error('Error deleting video from Drive:', err.message);
   }
@@ -847,7 +867,7 @@ app.post('/products', async (req, res) => {
     ) {
       try {
         const parentId = req.body.subfolderId || driveFolderId;
-        const uploaded = await uploadImage(req.body.image, parentId);
+        const uploaded = await uploadImage(req.body.image, parentId, req);
         req.body.image = uploaded.url;
         req.body.fileId = uploaded.fileId;
       } catch (err) {
@@ -888,10 +908,10 @@ app.put('/products/:id', async (req, res) => {
     ) {
       try {
         if (existing.fileId) {
-          await deleteImageFromDrive(existing.fileId);
+          await deleteImageFromDrive(existing.fileId, req);
         }
         const parentId = req.body.subfolderId || existing.subfolderId || driveFolderId;
-        const uploaded = await uploadImage(req.body.image, parentId);
+        const uploaded = await uploadImage(req.body.image, parentId, req);
         updateData.image = uploaded.url;
         updateData.fileId = uploaded.fileId;
       } catch (err) {
@@ -922,7 +942,7 @@ app.delete('/products/:id', async (req, res) => {
     if (!product) return res.status(404).json({ error: 'Product not found' });
 
     const fileId = product.fileId || extractFileId(product.image);
-    await deleteImageFromDrive(fileId);
+    await deleteImageFromDrive(fileId, req);
     deleteLocalImage(fileId);
 
     await logActivity('Product deleted', product.name);
@@ -1166,7 +1186,7 @@ app.post('/testimonials', async (req, res) => {
       req.body.video.startsWith('data:')
     ) {
       const parentId = req.body.subfolderId || testimonialsFolderId;
-      const uploaded = await uploadVideo(req.body.video, parentId);
+      const uploaded = await uploadVideo(req.body.video, parentId, req);
       req.body.video = uploaded.url;
       req.body.fileId = uploaded.fileId;
     }
@@ -1194,9 +1214,9 @@ app.put('/testimonials/:id', async (req, res) => {
       typeof req.body.video === 'string' &&
       req.body.video.startsWith('data:')
     ) {
-      if (existing.fileId) await deleteVideoFromDrive(existing.fileId);
+      if (existing.fileId) await deleteVideoFromDrive(existing.fileId, req);
       const parentId = req.body.subfolderId || existing.subfolderId || testimonialsFolderId;
-      const uploaded = await uploadVideo(req.body.video, parentId);
+      const uploaded = await uploadVideo(req.body.video, parentId, req);
       updateData.video = uploaded.url;
       updateData.fileId = uploaded.fileId;
     } else if (req.body.video !== undefined) {
@@ -1218,7 +1238,7 @@ app.delete('/testimonials/:id', async (req, res) => {
     const t = await Testimonial.findByIdAndDelete(req.params.id);
     if (!t) return res.status(404).json({ error: 'Testimonial not found' });
     const fileId = t.fileId || extractFileId(t.video);
-    await deleteVideoFromDrive(fileId);
+    await deleteVideoFromDrive(fileId, req);
     deleteLocalVideo(fileId);
     await logActivity('Testimonial deleted', t.name);
     res.json({ message: 'Testimonial deleted' });

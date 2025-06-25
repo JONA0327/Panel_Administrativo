@@ -48,6 +48,8 @@ GOOGLE_DRIVE_FOLDER_ID=<drive_folder_id>
 GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID=<drive_folder_id>
 # ID of the Shared Drive used by server/shared-drive-example.js
 GOOGLE_SHARED_DRIVE_ID=<drive_id>
+# Enable user OAuth uploads instead of the service account
+USE_OAUTH_UPLOAD=false
 ```
 
 > **Important**: Service accounts do not have their own storage quota. The
@@ -154,6 +156,28 @@ Environment variable `GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID` can define the
 default upload folder. The folder ID may also be configured at runtime via the
 `POST /config/testimonials-folder` endpoint and queried with
 `GET /config/testimonials-folder`.
+
+### OAuth uploads
+
+Set `USE_OAUTH_UPLOAD=true` if you prefer to upload files using a user's OAuth
+token instead of the service account. The `GoogleDriveAuth` component stores the
+access token in `localStorage` under `drive_token`. Include this token when
+calling the backend:
+
+```js
+const token = localStorage.getItem('drive_token');
+fetch('/api/products', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(data)
+});
+```
+
+When this header is present the server performs Drive actions on behalf of the
+authenticated user.
 
 ### Shared Drive example
 
