@@ -41,18 +41,40 @@ app.use('/videos', express.static(videoCacheDir));
 
 // Carga de credenciales de Google Drive
 const serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
+const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 let driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID || null;
 let testimonialsFolderId = process.env.GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID || null;
 let drive;
+let serviceAccountCreds = null;
 
-if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
-  const auth = new google.auth.GoogleAuth({
-    keyFile: serviceAccountPath,
-    scopes: ['https://www.googleapis.com/auth/drive']
-  });
+const serviceAccountPathExists = serviceAccountPath && fs.existsSync(serviceAccountPath);
+if (serviceAccountPathExists) {
+  try {
+    serviceAccountCreds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+  } catch (err) {
+    console.warn('⚠️ Error leyendo GOOGLE_SERVICE_ACCOUNT_PATH:', err.message);
+  }
+} else if (serviceAccountJson) {
+  try {
+    serviceAccountCreds = JSON.parse(serviceAccountJson);
+  } catch (err) {
+    console.warn('⚠️ Error parsing GOOGLE_SERVICE_ACCOUNT_JSON:', err.message);
+  }
+}
+
+if (serviceAccountCreds) {
+  const auth = serviceAccountPathExists
+    ? new google.auth.GoogleAuth({
+        keyFile: serviceAccountPath,
+        scopes: ['https://www.googleapis.com/auth/drive']
+      })
+    : new google.auth.GoogleAuth({
+        credentials: serviceAccountCreds,
+        scopes: ['https://www.googleapis.com/auth/drive']
+      });
   drive = google.drive({ version: 'v3', auth });
 } else {
-  console.warn('⚠️ No se encontró el archivo de credenciales de Google Drive. Revisa GOOGLE_SERVICE_ACCOUNT_PATH.');
+  console.warn('⚠️ No se encontró el archivo de credenciales de Google Drive. Revisa GOOGLE_SERVICE_ACCOUNT_PATH o GOOGLE_SERVICE_ACCOUNT_JSON.');
 }
 
 // Conexión a MongoDB y carga inicial de configuración
@@ -77,10 +99,9 @@ mongoose.connect(process.env.MONGODB_URI, {
   }
 
   // Si tenemos drive y carpeta, compartimos la carpeta con la cuenta de servicio
-  if (drive && driveFolderId && serviceAccountPath) {
+  if (drive && driveFolderId && serviceAccountCreds) {
     try {
-      const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-      const serviceEmail = creds.client_email;
+      const serviceEmail = serviceAccountCreds.client_email;
       await drive.permissions.create({
         fileId: driveFolderId,
         requestBody: {
@@ -95,10 +116,9 @@ mongoose.connect(process.env.MONGODB_URI, {
     }
   }
 
-  if (drive && testimonialsFolderId && serviceAccountPath) {
+  if (drive && testimonialsFolderId && serviceAccountCreds) {
     try {
-      const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-      const serviceEmail = creds.client_email;
+      const serviceEmail = serviceAccountCreds.client_email;
       await drive.permissions.create({
         fileId: testimonialsFolderId,
         requestBody: {
@@ -303,10 +323,9 @@ app.post('/config/drive-folder', async (req, res) => {
     console.log(`🗂️  Drive folder actualizado. Nuevo Folder ID: ${driveFolderId}`);
 
     // Compartir la carpeta con la cuenta de servicio inmediatamente
-    if (drive && serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+    if (drive && serviceAccountCreds) {
       try {
-        const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-        const serviceEmail = creds.client_email;
+        const serviceEmail = serviceAccountCreds.client_email;
         await drive.permissions.create({
           fileId: driveFolderId,
           requestBody: {
@@ -352,10 +371,9 @@ app.post('/config/testimonials-folder', async (req, res) => {
     );
     testimonialsFolderId = cfg.testimonialsFolderId;
 
-    if (drive && serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+    if (drive && serviceAccountCreds) {
       try {
-        const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-        const serviceEmail = creds.client_email;
+        const serviceEmail = serviceAccountCreds.client_email;
         await drive.permissions.create({
           fileId: testimonialsFolderId,
           requestBody: { role: 'writer', type: 'user', emailAddress: serviceEmail }
@@ -381,16 +399,10 @@ app.get('/config/testimonials-folder', (req, res) => {
 
 // Obtener el email de la cuenta de servicio
 app.get('/config/service-account', (req, res) => {
-  if (!serviceAccountPath || !fs.existsSync(serviceAccountPath)) {
+  if (!serviceAccountCreds) {
     return res.status(404).json({ error: 'Service account not configured' });
   }
-  try {
-    const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-    return res.json({ email: creds.client_email || null });
-  } catch (err) {
-    console.error('Error reading service account credentials:', err);
-    return res.status(500).json({ error: 'Failed to read service account' });
-  }
+  return res.json({ email: serviceAccountCreds.client_email || null });
 });
 
 // Crear subcarpeta en la carpeta principal de Drive
@@ -415,10 +427,9 @@ app.post('/config/subfolders', async (req, res) => {
     const folderId = response.data.id;
 
     // Compartir la subcarpeta con la cuenta de servicio
-    if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+    if (serviceAccountCreds) {
       try {
-        const creds = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-        const serviceEmail = creds.client_email;
+        const serviceEmail = serviceAccountCreds.client_email;
         await drive.permissions.create({
           fileId: folderId,
           requestBody: {
