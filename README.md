@@ -48,6 +48,13 @@ GOOGLE_DRIVE_FOLDER_ID=<drive_folder_id>
 GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID=<drive_folder_id>
 ```
 
+> **Important**: Service accounts do not have their own storage quota. The
+> folder configured via `GOOGLE_DRIVE_FOLDER_ID` (or selected in the interface)
+> must belong to a [Shared Drive](https://developers.google.com/workspace/drive/api/guides/about-shareddrives)
+> or you must implement OAuth delegation so the uploads occur on behalf of a real
+> user. Using "My Drive" of a personal account will result in errors such as
+> `Service Accounts do not have storage quota`.
+
 `REACT_APP_API_URL` configures the base URL for API requests. If omitted, the
 application defaults to `http://localhost:4000`.
 
