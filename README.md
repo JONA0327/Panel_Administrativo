@@ -46,6 +46,8 @@ GOOGLE_SERVICE_ACCOUNT_PATH=<path_to_service_account_json>
 GOOGLE_DRIVE_FOLDER_ID=<drive_folder_id>
 # Optional folder for testimonial videos
 GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID=<drive_folder_id>
+# ID of the Shared Drive used by server/shared-drive-example.js
+GOOGLE_SHARED_DRIVE_ID=<drive_id>
 ```
 
 > **Important**: Service accounts do not have their own storage quota. The
@@ -152,4 +154,20 @@ Environment variable `GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID` can define the
 default upload folder. The folder ID may also be configured at runtime via the
 `POST /config/testimonials-folder` endpoint and queried with
 `GET /config/testimonials-folder`.
+
+### Shared Drive example
+
+The `server/shared-drive-example.js` script demonstrates basic operations on a
+Shared Drive. Create the drive in the Google Drive UI, share it with your
+service account and set `GOOGLE_SHARED_DRIVE_ID` in `.env`.
+
+Run the example with:
+
+```bash
+cd server
+node shared-drive-example.js
+```
+
+It creates a folder and lists the items in the drive using the
+`supportsAllDrives` flag required when working with Shared Drives.
 

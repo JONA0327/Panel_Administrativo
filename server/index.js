@@ -415,7 +415,8 @@ app.post('/config/subfolders', async (req, res) => {
     };
     const response = await drive.files.create({
       requestBody: fileMetadata,
-      fields: 'id'
+      fields: 'id',
+      supportsAllDrives: true
     });
     const folderId = response.data.id;
 
@@ -487,7 +488,8 @@ async function uploadImage(dataUrl, parentId = driveFolderId) {
   const response = await drive.files.create({
     requestBody: fileMetadata,
     media: { mimeType, body: bufferStream },
-    fields: 'id'
+    fields: 'id',
+    supportsAllDrives: true
   });
 
   const fileId = response.data.id;
@@ -510,7 +512,7 @@ function extractFileId(url) {
 async function deleteImageFromDrive(fileId) {
   if (!drive || !fileId) return;
   try {
-    await drive.files.delete({ fileId });
+    await drive.files.delete({ fileId, supportsAllDrives: true });
   } catch (err) {
     console.error('Error deleting image from Drive:', err.message);
   }
@@ -533,7 +535,8 @@ async function updateImageOnDrive(fileId, dataUrl) {
 
   await drive.files.update({
     fileId,
-    media: { mimeType, body: bufferStream }
+    media: { mimeType, body: bufferStream },
+    supportsAllDrives: true
   });
 
   return `https://drive.google.com/uc?id=${fileId}`;
@@ -547,7 +550,7 @@ async function getLocalImage(fileId) {
   }
   if (!drive) return null;
   try {
-    const meta = await drive.files.get({ fileId, fields: 'mimeType' });
+    const meta = await drive.files.get({ fileId, fields: 'mimeType', supportsAllDrives: true });
     const mime = meta.data.mimeType || '';
     const extMap = {
       'image/jpeg': 'jpg',
@@ -558,7 +561,7 @@ async function getLocalImage(fileId) {
     const ext = extMap[mime] || mime.split('/').pop() || 'bin';
     const filePath = path.join(imageCacheDir, `${fileId}.${ext}`);
     const driveRes = await drive.files.get(
-      { fileId, alt: 'media' },
+      { fileId, alt: 'media', supportsAllDrives: true },
       { responseType: 'stream' }
     );
     await new Promise((resolve, reject) => {
@@ -611,7 +614,8 @@ async function uploadVideo(dataUrl, parentId = testimonialsFolderId) {
   const response = await drive.files.create({
     requestBody: fileMetadata,
     media: { mimeType, body: bufferStream },
-    fields: 'id'
+    fields: 'id',
+    supportsAllDrives: true
   });
 
   const fileId = response.data.id;
@@ -623,7 +627,7 @@ async function uploadVideo(dataUrl, parentId = testimonialsFolderId) {
 async function deleteVideoFromDrive(fileId) {
   if (!drive || !fileId) return;
   try {
-    await drive.files.delete({ fileId });
+    await drive.files.delete({ fileId, supportsAllDrives: true });
   } catch (err) {
     console.error('Error deleting video from Drive:', err.message);
   }
@@ -635,11 +639,14 @@ async function getLocalVideo(fileId) {
   if (existing) return `/videos/${existing}`;
   if (!drive) return null;
   try {
-    const meta = await drive.files.get({ fileId, fields: 'mimeType' });
+    const meta = await drive.files.get({ fileId, fields: 'mimeType', supportsAllDrives: true });
     const mime = meta.data.mimeType || '';
     const ext = mime.split('/').pop() || 'mp4';
     const filePath = path.join(videoCacheDir, `${fileId}.${ext}`);
-    const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
+    const driveRes = await drive.files.get(
+      { fileId, alt: 'media', supportsAllDrives: true },
+      { responseType: 'stream' }
+    );
     await new Promise((resolve, reject) => {
       const dest = fs.createWriteStream(filePath);
       driveRes.data.on('error', reject).pipe(dest);
@@ -820,7 +827,7 @@ app.get('/products/:id/image', async (req, res) => {
     if (!drive) return res.status(500).json({ error: 'Drive not configured' });
 
     const driveRes = await drive.files.get(
-      { fileId, alt: 'media' },
+      { fileId, alt: 'media', supportsAllDrives: true },
       { responseType: 'stream' }
     );
     res.setHeader('Content-Type', driveRes.headers['content-type'] || 'application/octet-stream');
@@ -1228,7 +1235,10 @@ app.get('/testimonials/:id/video', async (req, res) => {
     const fileId = t.fileId || extractFileId(t.video);
     if (!fileId) return res.status(404).json({ error: 'Video not available' });
     if (!drive) return res.status(500).json({ error: 'Drive not configured' });
-    const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
+    const driveRes = await drive.files.get(
+      { fileId, alt: 'media', supportsAllDrives: true },
+      { responseType: 'stream' }
+    );
     res.setHeader('Content-Type', driveRes.headers['content-type'] || 'application/octet-stream');
     driveRes.data.pipe(res);
   } catch (err) {
