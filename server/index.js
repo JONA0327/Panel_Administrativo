@@ -7,6 +7,8 @@ const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
 const axios = require('axios');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const Config = require('./DB/config');
@@ -15,10 +17,15 @@ const Package = require('./DB/packages');
 const Disease = require('./DB/diseases');
 const Testimonial = require('./DB/testimonials');
 const Activity = require('./DB/activities');
+const User = require('./DB/users');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '500mb' }));
+
+const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || '';
+const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS, 10) || 10;
 
 async function logActivity(action, details) {
   try {
@@ -26,6 +33,35 @@ async function logActivity(action, details) {
   } catch (err) {
     console.error('Failed to log activity:', err.message);
   }
+}
+
+async function auth(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    if (!user) return res.status(401).json({ error: 'Invalid token' });
+    req.user = user;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+function approvedOnly(req, res, next) {
+  if (!req.user?.approved) {
+    return res.status(403).json({ error: 'User not approved' });
+  }
+  next();
+}
+
+function adminOnly(req, res, next) {
+  if (req.user?.email !== ADMIN_EMAIL) {
+    return res.status(403).json({ error: 'Admin only' });
+  }
+  next();
 }
 const imageCacheDir = path.join(__dirname, 'image_cache');
 if (!fs.existsSync(imageCacheDir)) {
@@ -307,6 +343,73 @@ app.post('/database/backup', async (req, res) => {
 
 // ===== FIN DE RUTAS DE BASE DE DATOS =====
 
+// ----- Rutas de autenticación -----
+app.post('/auth/register', async (req, res) => {
+  const { email, id4life, name, password, country, line } = req.body || {};
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  try {
+    const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const user = await User.create({ email, id4life, name, passwordHash: hash, country, line, approved: false });
+    res.status(201).json({ id: user._id });
+  } catch (err) {
+    console.error('Error registering user:', err);
+    res.status(400).json({ error: 'Failed to register user' });
+  }
+});
+
+app.post('/auth/login', async (req, res) => {
+  const { email, password } = req.body || {};
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    const ok = await bcrypt.compare(password, user.passwordHash || '');
+    if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, approved: user.approved, isAdmin: user.email === ADMIN_EMAIL });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+app.get('/auth/pending', auth, adminOnly, async (req, res) => {
+  try {
+    const users = await User.find({ approved: false });
+    res.json(users);
+  } catch (err) {
+    console.error('Error fetching pending users:', err);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.patch('/auth/approve/:id', auth, adminOnly, async (req, res) => {
+  try {
+    let user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user.driveFolderId) {
+      const folderName = user.name || user.email;
+      try {
+        user.driveFolderId = await createUserFolder(folderName);
+      } catch (err) {
+        console.error('Error creating user folder:', err);
+      }
+    }
+    user.approved = true;
+    await user.save();
+    await logActivity('User approved', user.email);
+    res.json({ message: 'User approved', driveFolderId: user.driveFolderId });
+  } catch (err) {
+    console.error('Error approving user:', err);
+    res.status(500).json({ error: 'Failed to approve user' });
+  }
+});
+
+// ----- Fin autenticación -----
+
+// Todas las rutas siguientes requieren usuario autenticado y aprobado
+app.use(auth);
+app.use(approvedOnly);
+
 // Endpoint para configurar carpeta de Drive
 app.post('/config/drive-folder', async (req, res) => {
   const { folderId } = req.body;
@@ -468,6 +571,29 @@ app.get('/config/subfolders', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch subfolders', details: err.message });
   }
 });
+
+async function createUserFolder(name) {
+  if (!drive || !driveFolderId) throw new Error('Drive not configured');
+  const fileMetadata = {
+    name,
+    mimeType: 'application/vnd.google-apps.folder',
+    parents: [driveFolderId]
+  };
+  const resp = await drive.files.create({ requestBody: fileMetadata, fields: 'id' });
+  const folderId = resp.data.id;
+  if (serviceAccountCreds) {
+    try {
+      const serviceEmail = serviceAccountCreds.client_email;
+      await drive.permissions.create({
+        fileId: folderId,
+        requestBody: { role: 'writer', type: 'user', emailAddress: serviceEmail }
+      });
+    } catch (err) {
+      console.warn('⚠️ No se pudo compartir la carpeta de usuario:', err.message);
+    }
+  }
+  return folderId;
+}
 
 
 // Función corregida para subir base64 a Drive usando Readable stream
@@ -847,7 +973,7 @@ app.post('/products', async (req, res) => {
       req.body.image.startsWith('data:')
     ) {
       try {
-        const parentId = req.body.subfolderId || driveFolderId;
+        const parentId = req.body.subfolderId || req.user?.driveFolderId || driveFolderId;
         const uploaded = await uploadImage(req.body.image, parentId);
         req.body.image = uploaded.url;
         req.body.fileId = uploaded.fileId;
@@ -891,7 +1017,7 @@ app.put('/products/:id', async (req, res) => {
         if (existing.fileId) {
           await deleteImageFromDrive(existing.fileId);
         }
-        const parentId = req.body.subfolderId || existing.subfolderId || driveFolderId;
+        const parentId = req.body.subfolderId || existing.subfolderId || req.user?.driveFolderId || driveFolderId;
         const uploaded = await uploadImage(req.body.image, parentId);
         updateData.image = uploaded.url;
         updateData.fileId = uploaded.fileId;
@@ -1166,7 +1292,7 @@ app.post('/testimonials', async (req, res) => {
       typeof req.body.video === 'string' &&
       req.body.video.startsWith('data:')
     ) {
-      const parentId = req.body.subfolderId || testimonialsFolderId;
+      const parentId = req.body.subfolderId || req.user?.driveFolderId || testimonialsFolderId;
       const uploaded = await uploadVideo(req.body.video, parentId);
       req.body.video = uploaded.url;
       req.body.fileId = uploaded.fileId;
@@ -1196,7 +1322,7 @@ app.put('/testimonials/:id', async (req, res) => {
       req.body.video.startsWith('data:')
     ) {
       if (existing.fileId) await deleteVideoFromDrive(existing.fileId);
-      const parentId = req.body.subfolderId || existing.subfolderId || testimonialsFolderId;
+      const parentId = req.body.subfolderId || existing.subfolderId || req.user?.driveFolderId || testimonialsFolderId;
       const uploaded = await uploadVideo(req.body.video, parentId);
       updateData.video = uploaded.url;
       updateData.fileId = uploaded.fileId;
