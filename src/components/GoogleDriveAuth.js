@@ -27,6 +27,8 @@ function GoogleDriveAuth({ onAuthenticated }) {
   const [newFolderName, setNewFolderName] = useState("MediPanel_Storage");
   const [subfolderName, setSubfolderName] = useState("");
   const [rootFolderId, setRootFolderId] = useState("");
+  const [isCreatingRoot, setIsCreatingRoot] = useState(false);
+  const [isCreatingSub, setIsCreatingSub] = useState(false);
   const [subfolders, setSubfolders] = useState([]);
   const tokenClient = useRef(null);
 
@@ -170,6 +172,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
   };
 
   const handleCreateFolder = async () => {
+    setIsCreatingRoot(true);
     try {
       const response = await window.gapi.client.drive.files.create({
         resource: {
@@ -178,37 +181,41 @@ function GoogleDriveAuth({ onAuthenticated }) {
         },
         fields: "id,name",
       });
+
       const folderId = response.result.id;
       const path = `https://drive.google.com/drive/folders/${folderId}`;
+
+      const res = await fetch(`${API_URL}/config/drive-folder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folderId }),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(
+          payload.error || payload.message || "Failed to store folder ID",
+        );
+      }
+
+      await shareWithServiceAccount(folderId);
+
       setFolderPath(path);
       setRootFolderId(folderId);
       localStorage.setItem("drive_folder_path", path);
       localStorage.setItem("drive_folder_id", folderId);
-      try {
-        const res = await fetch(`${API_URL}/config/drive-folder`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ folderId }),
-        });
-        if (!res.ok) {
-          const payload = await res.json().catch(() => ({}));
-          throw new Error(
-            payload.error || payload.message || "Failed to store folder ID",
-          );
-        }
-      } catch (err) {
-        console.error("Failed to store folder ID", err);
-        alert("Error al configurar la carpeta en el servidor");
-      }
-      await shareWithServiceAccount(folderId);
+
       alert(`Carpeta creada exitosamente: ${response.result.name}`);
     } catch (err) {
       console.error("Error al crear la carpeta", err);
+      alert("Error al crear la carpeta");
+    } finally {
+      setIsCreatingRoot(false);
     }
   };
 
   const handleCreateSubfolder = async () => {
     if (!rootFolderId || !subfolderName.trim()) return;
+    setIsCreatingSub(true);
     try {
       const res = await fetch(`${API_URL}/config/subfolders`, {
         method: "POST",
@@ -228,6 +235,8 @@ function GoogleDriveAuth({ onAuthenticated }) {
     } catch (err) {
       console.error("Error al crear subcarpeta", err);
       alert("Error al crear la subcarpeta en el servidor");
+    } finally {
+      setIsCreatingSub(false);
     }
   };
 
@@ -409,9 +418,10 @@ function GoogleDriveAuth({ onAuthenticated }) {
                 <button
                   type="button"
                   onClick={handleCreateFolder}
-                  className="mt-2 w-full px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors"
+                  disabled={isCreatingRoot}
+                  className="mt-2 w-full px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Crear carpeta principal
+                  {isCreatingRoot ? "Creando..." : "Crear carpeta principal"}
                 </button>
               </div>
 
@@ -429,9 +439,10 @@ function GoogleDriveAuth({ onAuthenticated }) {
                 <button
                   type="button"
                   onClick={handleCreateSubfolder}
-                  className="mt-2 w-full px-4 py-2 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 transition-colors"
+                  disabled={isCreatingSub}
+                  className="mt-2 w-full px-4 py-2 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Crear subcarpeta
+                  {isCreatingSub ? "Creando..." : "Crear subcarpeta"}
                 </button>
               </div>
             </div>
