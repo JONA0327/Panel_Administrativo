@@ -1,6 +1,6 @@
 import React from 'react';
 
-function Sidebar({ currentView, setCurrentView }) {
+function Sidebar({ currentView, setCurrentView, isAdmin }) {
   const entries = [
     { name: 'Dashboard', icon: '📊' },
     { name: 'Productos', icon: '📦' },
@@ -11,6 +11,7 @@ function Sidebar({ currentView, setCurrentView }) {
     { name: 'BD', icon: '🗄️' },
     { name: 'Configuración', icon: '⚙️' },
   ];
+  if (isAdmin) entries.push({ name: 'Usuarios', icon: '👥' });
 
   const admin = { name: 'Admin', email: 'admin@medipanel.com' };
 

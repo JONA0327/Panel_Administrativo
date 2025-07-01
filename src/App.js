@@ -8,12 +8,21 @@ import Testimonials from './components/Testimonials';
 import Database from './components/Database';
 import Settings from './components/Settings';
 import Activities from './components/Activities';
+import Login from './components/Login';
+import Register from './components/Register';
+import AdminUsers from './components/AdminUsers';
 
 function App() {
   const [currentView, setCurrentView] = useState('Dashboard');
   const productsRef = useRef();
   const packagesRef = useRef();
   const testimonialsRef = useRef();
+  const [auth, setAuth] = useState({
+    token: localStorage.getItem('token'),
+    approved: localStorage.getItem('approved') === '1',
+    isAdmin: localStorage.getItem('isAdmin') === '1'
+  });
+  const [showRegister, setShowRegister] = useState(false);
 
   const openAddProduct = () => {
     setCurrentView('Productos');
@@ -55,14 +64,28 @@ function App() {
         return <Database />;
       case 'Configuración':
         return <Settings />;
+      case 'Usuarios':
+        return <AdminUsers />;
       default:
         return <Dashboard />;
     }
   };
 
+  if (!auth.token) {
+    return showRegister ? (
+      <Register onRegistered={() => setShowRegister(false)} onShowLogin={() => setShowRegister(false)} />
+    ) : (
+      <Login onLogin={data => setAuth({ token: data.token, approved: data.approved, isAdmin: data.isAdmin })} onShowRegister={() => setShowRegister(true)} />
+    );
+  }
+
+  if (!auth.approved) {
+    return <div className="p-8">Cuenta pendiente de aprobación.</div>;
+  }
+
   return (
     <div className="flex h-screen">
-      <Sidebar currentView={currentView} setCurrentView={setCurrentView} />
+      <Sidebar currentView={currentView} setCurrentView={setCurrentView} isAdmin={auth.isAdmin} />
       {renderCurrentView()}
     </div>
   );
