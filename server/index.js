@@ -44,6 +44,7 @@ async function auth(req, res, next) {
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ error: 'Invalid token' });
+    if (user.disabled) return res.status(403).json({ error: 'User disabled' });
     req.user = user;
     next();
   } catch (err) {
@@ -390,6 +391,7 @@ app.post('/auth/login', async (req, res) => {
     }
 
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    if (user.disabled) return res.status(403).json({ error: 'User disabled' });
     const ok = await bcrypt.compare(password, user.passwordHash || '');
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
@@ -407,6 +409,34 @@ app.get('/auth/pending', auth, adminOnly, async (req, res) => {
   } catch (err) {
     console.error('Error fetching pending users:', err);
     res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.get('/auth/users', auth, adminOnly, async (req, res) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (err) {
+    console.error('Error fetching users:', err);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.patch('/auth/disable/:id', auth, adminOnly, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (typeof req.body.disabled === 'boolean') {
+      user.disabled = req.body.disabled;
+    } else {
+      user.disabled = !user.disabled;
+    }
+    await user.save();
+    await logActivity('User disabled toggled', user.email, req.user?._id);
+    res.json({ message: 'User updated', disabled: user.disabled });
+  } catch (err) {
+    console.error('Error disabling user:', err);
+    res.status(500).json({ error: 'Failed to disable user' });
   }
 });
 
