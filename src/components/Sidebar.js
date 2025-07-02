@@ -8,10 +8,15 @@ function Sidebar({ currentView, setCurrentView, isAdmin, email, onLogout }) {
     { name: 'Índice de Enfermedades', icon: '🏥' },
     { name: 'Testimonios', icon: '💬' },
     { name: 'Actividades', icon: '📋' },
-    { name: 'BD', icon: '🗄️' },
-    { name: 'Configuración', icon: '⚙️' },
   ];
-  if (isAdmin) entries.push({ name: 'Usuarios', icon: '👥' });
+
+  if (isAdmin) {
+    entries.push(
+      { name: 'BD', icon: '🗄️' },
+      { name: 'Configuración', icon: '⚙️' },
+      { name: 'Usuarios', icon: '👥' }
+    );
+  }
 
   const userInfo = { role: isAdmin ? 'Admin' : 'Invitado', email };
 
