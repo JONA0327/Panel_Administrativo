@@ -53,7 +53,10 @@ function Activities() {
               <div className="w-2 h-2 rounded-full mt-2 bg-blue-500"></div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-800">{activity.action}</p>
-                <p className="text-xs text-slate-500">{new Date(activity.createdAt).toLocaleString()}</p>
+                <p className="text-xs text-slate-500">
+                  {new Date(activity.createdAt).toLocaleString()} -{' '}
+                  {activity.user?.name || activity.user?.email || 'Desconocido'}
+                </p>
               </div>
               <button
                 onClick={() => deleteActivity(activity._id)}
