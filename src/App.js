@@ -20,7 +20,8 @@ function App() {
   const [auth, setAuth] = useState({
     token: localStorage.getItem('token'),
     approved: localStorage.getItem('approved') === '1',
-    isAdmin: localStorage.getItem('isAdmin') === '1'
+    isAdmin: localStorage.getItem('isAdmin') === '1',
+    email: localStorage.getItem('email') || ''
   });
   const [showRegister, setShowRegister] = useState(false);
 
@@ -28,7 +29,8 @@ function App() {
     localStorage.removeItem('token');
     localStorage.removeItem('approved');
     localStorage.removeItem('isAdmin');
-    setAuth({ token: null, approved: false, isAdmin: false });
+    localStorage.removeItem('email');
+    setAuth({ token: null, approved: false, isAdmin: false, email: '' });
     setShowRegister(false);
   };
 
@@ -83,7 +85,17 @@ function App() {
     return showRegister ? (
       <Register onRegistered={() => setShowRegister(false)} onShowLogin={() => setShowRegister(false)} />
     ) : (
-      <Login onLogin={data => setAuth({ token: data.token, approved: data.approved, isAdmin: data.isAdmin })} onShowRegister={() => setShowRegister(true)} />
+      <Login
+        onLogin={data =>
+          setAuth({
+            token: data.token,
+            approved: data.approved,
+            isAdmin: data.isAdmin,
+            email: data.email
+          })
+        }
+        onShowRegister={() => setShowRegister(true)}
+      />
     );
   }
 
@@ -100,7 +112,12 @@ function App() {
 
   return (
     <div className="flex h-screen">
-      <Sidebar currentView={currentView} setCurrentView={setCurrentView} isAdmin={auth.isAdmin} />
+      <Sidebar
+        currentView={currentView}
+        setCurrentView={setCurrentView}
+        isAdmin={auth.isAdmin}
+        email={auth.email}
+      />
       {renderCurrentView()}
     </div>
   );
