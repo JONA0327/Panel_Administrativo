@@ -26,7 +26,8 @@ function Login({ onLogin, onShowRegister }) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('approved', data.approved ? '1' : '0');
         localStorage.setItem('isAdmin', data.isAdmin ? '1' : '0');
-        if (onLogin) onLogin(data);
+        localStorage.setItem('email', email);
+        if (onLogin) onLogin({ ...data, email });
       })
       .catch(err => setError(err.message));
   };
