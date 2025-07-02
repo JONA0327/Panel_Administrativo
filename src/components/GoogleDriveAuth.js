@@ -162,13 +162,16 @@ function GoogleDriveAuth({ onAuthenticated }) {
             emailAddress: data.email,
           },
         });
+        return true;
       } else {
         throw new Error("Service account email unavailable");
       }
     } catch (err) {
       console.error("Failed to share folder with service account", err);
       alert("Error al compartir la carpeta con la cuenta de servicio");
+      return false;
     }
+    return true;
   };
 
   const handleCreateFolder = async () => {
@@ -185,6 +188,11 @@ function GoogleDriveAuth({ onAuthenticated }) {
       const folderId = response.result.id;
       const path = `https://drive.google.com/drive/folders/${folderId}`;
 
+      const shared = await shareWithServiceAccount(folderId);
+      if (!shared) {
+        return;
+      }
+
       const res = await fetch(`${API_URL}/config/drive-folder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -196,8 +204,6 @@ function GoogleDriveAuth({ onAuthenticated }) {
           payload.error || payload.message || "Failed to store folder ID",
         );
       }
-
-      await shareWithServiceAccount(folderId);
 
       setFolderPath(path);
       setRootFolderId(folderId);
@@ -250,6 +256,10 @@ function GoogleDriveAuth({ onAuthenticated }) {
       if (idMatch) {
         setRootFolderId(idMatch[0]);
         localStorage.setItem("drive_folder_id", idMatch[0]);
+        const shared = await shareWithServiceAccount(idMatch[0]);
+        if (!shared) {
+          return;
+        }
         try {
           const res = await fetch(`${API_URL}/config/drive-folder`, {
             method: "POST",
@@ -266,7 +276,6 @@ function GoogleDriveAuth({ onAuthenticated }) {
           console.error("Failed to store folder ID", err);
           alert("Error al configurar la carpeta en el servidor");
         }
-        await shareWithServiceAccount(idMatch[0]);
       }
       alert(`Carpeta configurada: ${trimmed}`);
       setShowFolderOptions(false);
