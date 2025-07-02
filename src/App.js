@@ -10,6 +10,7 @@ import Settings from './components/Settings';
 import Activities from './components/Activities';
 import Login from './components/Login';
 import Register from './components/Register';
+import PendingApproval from './components/PendingApproval';
 import AdminUsers from './components/AdminUsers';
 
 function App() {
@@ -83,7 +84,10 @@ function App() {
 
   if (!auth.token) {
     return showRegister ? (
-      <Register onRegistered={() => setShowRegister(false)} onShowLogin={() => setShowRegister(false)} />
+      <Register 
+        onRegistered={() => setShowRegister(false)} 
+        onShowLogin={() => setShowRegister(false)} 
+      />
     ) : (
       <Login
         onLogin={data =>
@@ -101,12 +105,10 @@ function App() {
 
   if (!auth.approved) {
     return (
-      <div className="p-8 space-y-4">
-        <p>Cuenta pendiente de aprobación.</p>
-        <button onClick={handleLogout} className="text-blue-500 underline">
-          Cerrar sesión
-        </button>
-      </div>
+      <PendingApproval 
+        email={auth.email}
+        onLogout={handleLogout}
+      />
     );
   }
 
