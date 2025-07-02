@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema({
   country: String,
   line: String,
   approved: { type: Boolean, default: false },
+  disabled: { type: Boolean, default: false },
   driveFolderId: String
 });
 
