@@ -24,6 +24,14 @@ function App() {
   });
   const [showRegister, setShowRegister] = useState(false);
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('approved');
+    localStorage.removeItem('isAdmin');
+    setAuth({ token: null, approved: false, isAdmin: false });
+    setShowRegister(false);
+  };
+
   const openAddProduct = () => {
     setCurrentView('Productos');
     setTimeout(() => productsRef.current?.openAddModal(), 0);
@@ -80,7 +88,14 @@ function App() {
   }
 
   if (!auth.approved) {
-    return <div className="p-8">Cuenta pendiente de aprobación.</div>;
+    return (
+      <div className="p-8 space-y-4">
+        <p>Cuenta pendiente de aprobación.</p>
+        <button onClick={handleLogout} className="text-blue-500 underline">
+          Cerrar sesión
+        </button>
+      </div>
+    );
   }
 
   return (
