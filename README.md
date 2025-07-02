@@ -40,6 +40,8 @@ GOOGLE_SERVICE_ACCOUNT_JSON=<json_string>
 GOOGLE_DRIVE_FOLDER_ID=<drive_folder_id>
 # Optional folder for testimonial videos
 GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID=<drive_folder_id>
+ADMIN_EMAIL=<admin_email>
+ADMIN_PASSWORD=panelAdmin123456
 ```
 
 `REACT_APP_API_URL` configures the base URL for API requests. If omitted, the

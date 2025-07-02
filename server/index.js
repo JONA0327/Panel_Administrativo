@@ -25,6 +25,7 @@ app.use(express.json({ limit: '500mb' }));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || '';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'panelAdmin123456';
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS, 10) || 10;
 
 async function logActivity(action, details) {
@@ -166,6 +167,21 @@ mongoose.connect(process.env.MONGODB_URI, {
       console.log(`✅ Carpeta ${testimonialsFolderId} compartida con ${serviceEmail} como Editor`);
     } catch (err) {
       console.warn('⚠️ No se pudo compartir la carpeta de testimonios con la cuenta de servicio:', err.message);
+    }
+  }
+
+  // Ensure admin account exists
+  if (ADMIN_EMAIL) {
+    let adminUser = await User.findOne({ email: ADMIN_EMAIL });
+    if (!adminUser) {
+      const hash = await bcrypt.hash(ADMIN_PASSWORD, BCRYPT_ROUNDS);
+      adminUser = await User.create({
+        email: ADMIN_EMAIL,
+        name: 'Admin',
+        passwordHash: hash,
+        approved: true
+      });
+      console.log(`✅ Admin user ${ADMIN_EMAIL} creado`);
     }
   }
 })
@@ -360,7 +376,18 @@ app.post('/auth/register', async (req, res) => {
 app.post('/auth/login', async (req, res) => {
   const { email, password } = req.body || {};
   try {
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ email });
+
+    if (!user && email === ADMIN_EMAIL) {
+      const hash = await bcrypt.hash(ADMIN_PASSWORD, BCRYPT_ROUNDS);
+      user = await User.create({
+        email: ADMIN_EMAIL,
+        name: 'Admin',
+        passwordHash: hash,
+        approved: true
+      });
+    }
+
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     const ok = await bcrypt.compare(password, user.passwordHash || '');
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
