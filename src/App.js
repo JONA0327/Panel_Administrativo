@@ -72,9 +72,9 @@ function App() {
       case 'Actividades':
         return <Activities />;
       case 'BD':
-        return <Database />;
+        return auth.isAdmin ? <Database /> : <Dashboard />;
       case 'Configuración':
-        return <Settings />;
+        return auth.isAdmin ? <Settings /> : <Dashboard />;
       case 'Usuarios':
         return <AdminUsers />;
       default:
