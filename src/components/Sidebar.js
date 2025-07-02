@@ -1,6 +1,6 @@
 import React from 'react';
 
-function Sidebar({ currentView, setCurrentView, isAdmin, email }) {
+function Sidebar({ currentView, setCurrentView, isAdmin, email, onLogout }) {
   const entries = [
     { name: 'Dashboard', icon: '📊' },
     { name: 'Productos', icon: '📦' },
@@ -49,17 +49,23 @@ function Sidebar({ currentView, setCurrentView, isAdmin, email }) {
         </ul>
       </nav>
 
-      <div className="mt-8 p-4 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl border border-purple-100">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-            <span className="text-white font-semibold">{(userInfo.role || 'U')[0]}</span>
+        <div className="mt-8 p-4 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl border border-purple-100">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+              <span className="text-white font-semibold">{(userInfo.role || 'U')[0]}</span>
+            </div>
+            <div>
+              <p className="font-semibold text-gray-800">{userInfo.role}</p>
+              <p className="text-sm text-gray-500">{userInfo.email}</p>
+            </div>
           </div>
-          <div>
-            <p className="font-semibold text-gray-800">{userInfo.role}</p>
-            <p className="text-sm text-gray-500">{userInfo.email}</p>
-          </div>
+          <button
+            onClick={onLogout}
+            className="mt-4 text-red-600 hover:underline w-full text-left"
+          >
+            Cerrar sesión
+          </button>
         </div>
-      </div>
     </aside>
   );
 }

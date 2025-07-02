@@ -117,6 +117,7 @@ function App() {
         setCurrentView={setCurrentView}
         isAdmin={auth.isAdmin}
         email={auth.email}
+        onLogout={handleLogout}
       />
       {renderCurrentView()}
     </div>
