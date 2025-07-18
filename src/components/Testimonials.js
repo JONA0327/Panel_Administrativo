@@ -18,23 +18,52 @@ const Testimonials = forwardRef((props, ref) => {
     subfolderId: ''
   });
 
-  const availableProducts = products;
   const productMap = Object.fromEntries(products.map(p => [p._id, p.name]));
 
   useEffect(() => {
-    fetch(`${API_URL}/testimonials`)
-      .then(res => res.json())
-      .then(setTestimonials)
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Carga de testimonios
+    fetch(`${API_URL}/testimonials`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then(async res => {
+        if (!res.ok) throw new Error('Unauthorized');
+        return res.json();
+      })
+      .then(data => setTestimonials(Array.isArray(data) ? data : []))
       .catch(err => console.error('Failed to load testimonials', err));
 
-    fetch(`${API_URL}/products`)
-      .then(res => res.json())
-      .then(setProducts)
+    // Carga de productos
+    fetch(`${API_URL}/products`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then(async res => {
+        if (!res.ok) throw new Error('Unauthorized');
+        return res.json();
+      })
+      .then(data => setProducts(Array.isArray(data) ? data : []))
       .catch(err => console.error('Failed to load products', err));
 
-    fetch(`${API_URL}/config/subfolders`)
-      .then(res => res.json())
-      .then(setSubfolders)
+    // Carga de subcarpetas
+    fetch(`${API_URL}/config/subfolders`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then(async res => {
+        if (!res.ok) throw new Error('Unauthorized');
+        return res.json();
+      })
+      .then(data => setSubfolders(Array.isArray(data) ? data : []))
       .catch(err => console.error('Failed to load subfolders', err));
   }, []);
 
@@ -64,17 +93,12 @@ const Testimonials = forwardRef((props, ref) => {
   const toggleProductSelection = (productId) => {
     setFormData(prev => {
       const isSelected = prev.associatedProducts.includes(productId);
-      if (isSelected) {
-        return {
-          ...prev,
-          associatedProducts: prev.associatedProducts.filter(p => p !== productId)
-        };
-      } else {
-        return {
-          ...prev,
-          associatedProducts: [...prev.associatedProducts, productId]
-        };
-      }
+      return {
+        ...prev,
+        associatedProducts: isSelected
+          ? prev.associatedProducts.filter(p => p !== productId)
+          : [...prev.associatedProducts, productId]
+      };
     });
   };
 
@@ -82,9 +106,7 @@ const Testimonials = forwardRef((props, ref) => {
     setEditingTestimonial(testimonial);
     setFormData({
       name: testimonial.name || '',
-      associatedProducts: Array.isArray(testimonial.associatedProducts)
-        ? testimonial.associatedProducts
-        : [],
+      associatedProducts: Array.isArray(testimonial.associatedProducts) ? testimonial.associatedProducts : [],
       videoUrl: testimonial.video || '',
       videoFile: null,
       subfolderId: testimonial.subfolderId || ''
@@ -106,43 +128,47 @@ const Testimonials = forwardRef((props, ref) => {
       ? `${API_URL}/testimonials/${editingTestimonial._id}`
       : `${API_URL}/testimonials`;
     const method = editingTestimonial ? 'PUT' : 'POST';
+    const token = localStorage.getItem('token');
 
     fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
       body: JSON.stringify(payload)
     })
-      .then(res => res.json())
+      .then(async res => {
+        if (!res.ok) throw new Error('Unauthorized');
+        return res.json();
+      })
       .then(data => {
-        if (editingTestimonial) {
-          setTestimonials(prev =>
-            prev.map(t => (t._id === data._id ? data : t))
-          );
-        } else {
-          setTestimonials(prev => [...prev, data]);
-        }
+        setTestimonials(prev =>
+          editingTestimonial
+            ? prev.map(t => t._id === data._id ? data : t)
+            : [...prev, data]
+        );
         setIsSaving(false);
         closeModal();
       })
       .catch(err => {
-        console.error(
-          editingTestimonial
-            ? 'Failed to update testimonial'
-            : 'Failed to create testimonial',
-          err
-        );
+        console.error(editingTestimonial ? 'Failed to update testimonial' : 'Failed to create testimonial', err);
         setIsSaving(false);
       });
   };
 
   const deleteTestimonial = (testimonialId) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este testimonio?')) {
-      fetch(`${API_URL}/testimonials/${testimonialId}`, { method: 'DELETE' })
-        .then(() => {
-          setTestimonials(prev => prev.filter(t => t._id !== testimonialId));
-        })
-        .catch(err => console.error('Failed to delete testimonial', err));
-    }
+    if (!window.confirm('¿Estás seguro de que quieres eliminar este testimonio?')) return;
+    const token = localStorage.getItem('token');
+    fetch(`${API_URL}/testimonials/${testimonialId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Unauthorized');
+        setTestimonials(prev => prev.filter(t => t._id !== testimonialId));
+      })
+      .catch(err => console.error('Failed to delete testimonial', err));
   };
 
   const closeModal = () => {
@@ -169,9 +195,7 @@ const Testimonials = forwardRef((props, ref) => {
     setIsModalOpen(true);
   };
 
-  useImperativeHandle(ref, () => ({
-    openAddModal
-  }));
+  useImperativeHandle(ref, () => ({ openAddModal }));
 
   return (
     <main className="flex-1 p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-y-auto min-h-screen">
@@ -201,11 +225,7 @@ const Testimonials = forwardRef((props, ref) => {
             <div key={testimonial._id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
               <div className="mb-4">
                 <video
-                  src={
-                    testimonial.localVideo
-                      ? `${API_URL}${testimonial.localVideo}`
-                      : testimonial.video
-                  }
+                  src={testimonial.localVideo ? `${API_URL}${testimonial.localVideo}` : testimonial.video}
                   className="w-full h-48 object-cover rounded-xl"
                   controls
                   poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f1f5f9'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='12' fill='%2364748b' text-anchor='middle' dy='.3em'%3EVideo%3C/text%3E%3C/svg%3E"
@@ -248,11 +268,10 @@ const Testimonials = forwardRef((props, ref) => {
             <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-slate-200">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold text-slate-800">{editingTestimonial ? 'Editar Testimonio' : 'Subir Nuevo Testimonio'}</h2>
-                  <button
-                    onClick={closeModal}
-                    className="text-slate-400 hover:text-slate-600 text-2xl"
-                  >
+                  <h2 className="text-2xl font-bold text-slate-800">
+                    {editingTestimonial ? 'Editar Testimonio' : 'Subir Nuevo Testimonio'}
+                  </h2>
+                  <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 text-2xl">
                     ✕
                   </button>
                 </div>
@@ -281,10 +300,10 @@ const Testimonials = forwardRef((props, ref) => {
                     Productos Asociados
                   </label>
                   <div className="grid grid-cols-2 gap-3">
-                    {availableProducts.map((product) => (
+                    {products.map((product) => (
                       <div
-                        key={product.id}
-                      className={`p-3 border rounded-xl cursor-pointer transition-all ${
+                        key={product._id}
+                        className={`p-3 border rounded-xl cursor-pointer transition-all ${
                           formData.associatedProducts.includes(product._id)
                             ? 'border-purple-500 bg-purple-50'
                             : 'border-slate-300 hover:border-slate-400'
@@ -353,7 +372,7 @@ const Testimonials = forwardRef((props, ref) => {
                         name="videoUrl"
                         value={formData.videoFile ? '' : formData.videoUrl}
                         onChange={handleInputChange}
-                        disabled={formData.videoFile}
+                        disabled={!!formData.videoFile}
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all disabled:bg-slate-100"
                         placeholder="https://ejemplo.com/video.mp4"
                       />
