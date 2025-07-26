@@ -14,6 +14,28 @@ import Register from './components/Register';
 import PendingApproval from './components/PendingApproval';
 import AdminUsers from './components/AdminUsers';
 
+// Verifica expiración del token JWT para cerrar sesión automáticamente
+function checkTokenExpiration() {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  try {
+    const { exp } = JSON.parse(atob(token.split('.')[1]));
+    if (exp && Date.now() >= exp * 1000) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('approved');
+      localStorage.removeItem('isAdmin');
+      localStorage.removeItem('email');
+    }
+  } catch (e) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('approved');
+    localStorage.removeItem('isAdmin');
+    localStorage.removeItem('email');
+  }
+}
+
+checkTokenExpiration();
+
 function App() {
   const [currentView, setCurrentView] = useState('Dashboard');
   const productsRef = useRef();
