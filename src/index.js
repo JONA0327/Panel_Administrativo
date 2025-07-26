@@ -13,7 +13,7 @@ window.fetch = async (url, options = {}) => {
 
   const response = await originalFetch(url, { ...options, headers });
 
-  handleApiError(response);
+  await handleApiError(response);
 
   return response;
 };
