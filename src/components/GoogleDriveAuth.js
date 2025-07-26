@@ -178,22 +178,27 @@ function GoogleDriveAuth({ onAuthenticated }) {
     return () => clearInterval(intervalId);
   }, []);
 
-  // Carga de subcarpetas con JWT en header
-  useEffect(() => {
+  // Helper para cargar subcarpetas desde el backend
+  const loadSubfolders = () => {
     if (!isAuthenticated) return;
     const jwt = localStorage.getItem("token");
     fetch(`${API_URL}/config/subfolders`, {
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${jwt}`
-      }
+        Authorization: `Bearer ${jwt}`,
+      },
     })
-      .then(async res => {
+      .then(async (res) => {
         if (!res.ok) throw new Error("Unauthorized");
         return res.json();
       })
       .then(setSubfolders)
-      .catch(err => console.error("Failed to fetch subfolders", err));
+      .catch((err) => console.error("Failed to fetch subfolders", err));
+  };
+
+  // Carga inicial de subcarpetas
+  useEffect(() => {
+    loadSubfolders();
   }, [isAuthenticated]);
 
   const handleGoogleSignIn = () => {
@@ -283,15 +288,36 @@ function GoogleDriveAuth({ onAuthenticated }) {
           payload.error || payload.message || "Failed to create subfolder"
         );
       }
-      const saved = await res.json();
-      setSubfolders((prev) => [...prev, saved]);
-      alert(`Subcarpeta creada en el servidor: ${saved.name}`);
+      await res.json();
+      alert("Subcarpeta creada en el servidor");
       setSubfolderName("");
+      loadSubfolders();
     } catch (err) {
       console.error("Error al crear subcarpeta", err);
       alert("Error al crear la subcarpeta en el servidor");
     } finally {
       setIsCreatingSub(false);
+    }
+  };
+
+  const handleDeleteSubfolder = async (id) => {
+    if (!id) return;
+    try {
+      const res = await fetch(`${API_URL}/config/subfolders/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(
+          payload.error || payload.message || "Failed to delete subfolder"
+        );
+      }
+      await res.json().catch(() => ({}));
+      loadSubfolders();
+    } catch (err) {
+      console.error("Error al eliminar subcarpeta", err);
+      alert("Error al eliminar la subcarpeta en el servidor");
     }
   };
 
@@ -454,20 +480,58 @@ function GoogleDriveAuth({ onAuthenticated }) {
       )}
 
       {folderPath && !showFolderOptions && (
-        <div className="bg-green-50 p-4 rounded-xl">
-          <div className="flex items-center space-x-2">
-            <span className="text-green-600 text-lg">📁</span>
-            <div>
-              <p className="font-medium text-slate-800">Carpeta configurada</p>
-              <p className="text-sm text-slate-600">{folderPath}</p>
+        <div className="bg-green-50 p-4 rounded-xl space-y-4">
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="text-green-600 text-lg">📁</span>
+              <div>
+                <p className="font-medium text-slate-800">Carpeta configurada</p>
+                <p className="text-sm text-slate-600">{folderPath}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowFolderOptions(true)}
+              className="mt-2 text-blue-600 hover:text-blue-700 font-medium text-sm"
+            >
+              Cambiar carpeta
+            </button>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-slate-700 mb-2">Subcarpetas</h4>
+            <ul className="space-y-2">
+              {subfolders.map((sf) => (
+                <li
+                  key={sf.folderId}
+                  className="flex items-center justify-between bg-white p-2 rounded-lg shadow"
+                >
+                  <span>{sf.name}</span>
+                  <button
+                    onClick={() => handleDeleteSubfolder(sf.folderId)}
+                    className="text-red-600 hover:text-red-700 text-sm"
+                  >
+                    Eliminar
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div className="flex mt-3 space-x-2">
+              <input
+                type="text"
+                value={subfolderName}
+                onChange={(e) => setSubfolderName(e.target.value)}
+                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                placeholder="Nueva subcarpeta"
+              />
+              <button
+                onClick={handleCreateSubfolder}
+                disabled={isCreatingSub}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
+              >
+                {isCreatingSub ? "Creando..." : "Crear"}
+              </button>
             </div>
           </div>
-          <button
-            onClick={() => setShowFolderOptions(true)}
-            className="mt-2 text-blue-600 hover:text-blue-700 font-medium text-sm"
-          >
-            Cambiar carpeta
-          </button>
         </div>
       )}
     </div>
