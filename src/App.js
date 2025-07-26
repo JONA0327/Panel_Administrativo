@@ -5,6 +5,7 @@ import Products from './components/Products';
 import Packages from './components/Packages';
 import Diseases from './components/Diseases';
 import Testimonials from './components/Testimonials';
+import Conversations from './components/Conversations';
 import Database from './components/Database';
 import Settings from './components/Settings';
 import Activities from './components/Activities';
@@ -69,6 +70,8 @@ function App() {
         return <Diseases />;
       case 'Testimonios':
         return <Testimonials ref={testimonialsRef} />;
+      case 'Conversaciones':
+        return <Conversations />;
       case 'Actividades':
         return <Activities />;
       case 'BD':
