@@ -418,7 +418,31 @@ app.post('/database/import', async (req, res) => {
       const col = db.collection(name);
       await col.deleteMany({});
       if (docs.length > 0) {
-        await col.insertMany(docs);
+        const normalized = docs.map(doc => {
+          if (
+            doc._id &&
+            typeof doc._id === 'string' &&
+            /^[a-fA-F0-9]{24}$/.test(doc._id)
+          ) {
+            doc._id = new mongoose.Types.ObjectId(doc._id);
+          }
+          if (Array.isArray(doc.productIds)) {
+            doc.productIds = doc.productIds.map(id =>
+              typeof id === 'string' && /^[a-fA-F0-9]{24}$/.test(id)
+                ? new mongoose.Types.ObjectId(id)
+                : id
+            );
+          }
+          if (Array.isArray(doc.associatedProducts)) {
+            doc.associatedProducts = doc.associatedProducts.map(id =>
+              typeof id === 'string' && /^[a-fA-F0-9]{24}$/.test(id)
+                ? new mongoose.Types.ObjectId(id)
+                : id
+            );
+          }
+          return doc;
+        });
+        await col.insertMany(normalized);
       }
     }
     await loadConfigFromDB();
