@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { apiFetch } from "../utils/api";
 
 // Helper to wait until the gapi script has finished loading
 const waitForGapi = () => {
@@ -65,7 +66,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
 
         if (!savedFolderId) {
           try {
-            const res = await fetch(`${API_URL}/config/drive-folder`);
+            const res = await apiFetch(`${API_URL}/config/drive-folder`);
             const data = await res.json();
             if (data.folderId) {
               savedFolderId = data.folderId;
@@ -81,7 +82,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
         if ((!savedToken || !savedExp || Date.now() >= savedExp) && localStorage.getItem("token")) {
           try {
             const jwt = localStorage.getItem("token");
-            const resp = await fetch(`${API_URL}/config/drive-token`, {
+            const resp = await apiFetch(`${API_URL}/config/drive-token`, {
               headers: { Authorization: `Bearer ${jwt}` }
             });
             if (resp.ok) {
@@ -140,7 +141,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
           localStorage.setItem("drive_token_exp", expiration.toString());
           try {
             const jwt = localStorage.getItem("token");
-            await fetch(`${API_URL}/config/drive-token`, {
+            await apiFetch(`${API_URL}/config/drive-token`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -182,7 +183,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
   const loadSubfolders = () => {
     if (!isAuthenticated) return;
     const jwt = localStorage.getItem("token");
-    fetch(`${API_URL}/config/subfolders`, {
+    apiFetch(`${API_URL}/config/subfolders`, {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${jwt}`,
@@ -208,7 +209,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
 
   const shareWithServiceAccount = async (folderId) => {
     try {
-      const res = await fetch(`${API_URL}/config/service-account`);
+      const res = await apiFetch(`${API_URL}/config/service-account`);
       const data = await res.json();
       if (res.ok && data.email) {
         await window.gapi.client.drive.permissions.create({
@@ -247,7 +248,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
       const shared = await shareWithServiceAccount(folderId);
       if (!shared) return;
 
-      const res = await fetch(`${API_URL}/config/drive-folder`, {
+      const res = await apiFetch(`${API_URL}/config/drive-folder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ folderId }),
@@ -277,7 +278,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
     if (!rootFolderId || !subfolderName.trim()) return;
     setIsCreatingSub(true);
     try {
-      const res = await fetch(`${API_URL}/config/subfolders`, {
+      const res = await apiFetch(`${API_URL}/config/subfolders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: subfolderName.trim() }),
@@ -303,7 +304,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
   const handleDeleteSubfolder = async (id) => {
     if (!id) return;
     try {
-      const res = await fetch(`${API_URL}/config/subfolders/${id}`, {
+      const res = await apiFetch(`${API_URL}/config/subfolders/${id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
@@ -334,7 +335,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
       const shared = await shareWithServiceAccount(idMatch[0]);
       if (!shared) return;
       try {
-        const res = await fetch(`${API_URL}/config/drive-folder`, {
+        const res = await apiFetch(`${API_URL}/config/drive-folder`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ folderId: idMatch[0] }),
@@ -363,7 +364,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
     }
     if (localStorage.getItem("token")) {
       const jwt = localStorage.getItem("token");
-      fetch(`${API_URL}/config/drive-token`, {
+      apiFetch(`${API_URL}/config/drive-token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

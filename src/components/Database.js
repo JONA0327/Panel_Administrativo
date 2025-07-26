@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { apiFetch } from '../utils/api';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
@@ -24,7 +25,7 @@ function Database() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/database/collections`, {
+      const response = await apiFetch(`${API_URL}/database/collections`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Failed to load collections');
@@ -40,7 +41,7 @@ function Database() {
   const loadDatabaseStats = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/database/stats`, {
+      const response = await apiFetch(`${API_URL}/database/stats`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Failed to load stats');
@@ -54,7 +55,7 @@ function Database() {
   const loadCollectionData = async (collectionName) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/database/collections/${collectionName}/data`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -71,7 +72,7 @@ function Database() {
     try {
       setBackupLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/database/backup`, {
+      const response = await apiFetch(`${API_URL}/database/backup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -107,7 +108,7 @@ function Database() {
       const text = await file.text();
       const backup = JSON.parse(text);
       const token = localStorage.getItem('token');
-      const resp = await fetch(`${API_URL}/database/import`, {
+      const resp = await apiFetch(`${API_URL}/database/import`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -130,7 +131,7 @@ function Database() {
   const deleteCollection = async (collectionName) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/database/collections/${collectionName}`, {
+      const response = await apiFetch(`${API_URL}/database/collections/${collectionName}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
