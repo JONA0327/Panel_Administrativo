@@ -8,14 +8,8 @@ function Activities() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-      apiFetch(`${API_URL}/activities`)
-        .then(async res => {
-          if (res.status === 403) {
-            alert('No autorizado');
-            return [];
-        }
-        return res.json();
-      })
+    apiFetch(`${API_URL}/activities`)
+      .then(res => res.json())
       .then(data => setActivities(data))
       .catch(err => console.error('Error fetching activities:', err))
       .finally(() => setLoading(false));
@@ -23,12 +17,8 @@ function Activities() {
 
   const deleteActivity = (id) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar esta actividad?')) {
-        apiFetch(`${API_URL}/activities/${id}`, { method: 'DELETE' })
-          .then(res => {
-            if (res.status === 403) {
-              alert('No autorizado');
-              return;
-          }
+      apiFetch(`${API_URL}/activities/${id}`, { method: 'DELETE' })
+        .then(() => {
           setActivities(prev => prev.filter(a => a._id !== id));
         })
         .catch(err => console.error('Error deleting activity:', err));

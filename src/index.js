@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';      // ← aquí importas Tailwind
 import App from './App';
+import { handleApiError } from './utils/api';
 
 // Inyecta token de autenticación en todas las peticiones fetch
 const originalFetch = window.fetch;
@@ -12,13 +13,7 @@ window.fetch = async (url, options = {}) => {
 
   const response = await originalFetch(url, { ...options, headers });
 
-  if (response.status === 401) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('approved');
-    localStorage.removeItem('isAdmin');
-    localStorage.removeItem('email');
-    window.location.reload();
-  }
+  handleApiError(response);
 
   return response;
 };

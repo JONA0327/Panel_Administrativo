@@ -25,56 +25,26 @@ const Testimonials = forwardRef((props, ref) => {
     if (!token) return;
 
     // Carga de testimonios
-    fetch(`${API_URL}/testimonials`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
+    apiFetch(`${API_URL}/testimonials`, {
+      headers: { 'Content-Type': 'application/json' }
     })
-      .then(async res => {
-        if (res.status === 403) {
-          alert('No autorizado');
-          return [];
-        }
-        if (!res.ok) throw new Error('Unauthorized');
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => setTestimonials(Array.isArray(data) ? data : []))
       .catch(err => console.error('Failed to load testimonials', err));
 
     // Carga de productos
-    fetch(`${API_URL}/products`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
+    apiFetch(`${API_URL}/products`, {
+      headers: { 'Content-Type': 'application/json' }
     })
-      .then(async res => {
-        if (res.status === 403) {
-          alert('No autorizado');
-          return [];
-        }
-        if (!res.ok) throw new Error('Unauthorized');
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => setProducts(Array.isArray(data) ? data : []))
       .catch(err => console.error('Failed to load products', err));
 
     // Carga de subcarpetas
-    fetch(`${API_URL}/config/subfolders`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
+    apiFetch(`${API_URL}/config/subfolders`, {
+      headers: { 'Content-Type': 'application/json' }
     })
-      .then(async res => {
-        if (res.status === 403) {
-          alert('No autorizado');
-          return [];
-        }
-        if (!res.ok) throw new Error('Unauthorized');
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => setSubfolders(Array.isArray(data) ? data : []))
       .catch(err => console.error('Failed to load subfolders', err));
   }, []);
@@ -140,21 +110,13 @@ const Testimonials = forwardRef((props, ref) => {
       ? `${API_URL}/testimonials/${editingTestimonial._id}`
       : `${API_URL}/testimonials`;
     const method = editingTestimonial ? 'PUT' : 'POST';
-    const token = localStorage.getItem('token');
 
-    fetch(url, {
+    apiFetch(url, {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
       .then(async res => {
-        if (res.status === 403) {
-          alert('No autorizado');
-          throw new Error('Forbidden');
-        }
         if (!res.ok) throw new Error('Unauthorized');
         return res.json();
       })
@@ -176,15 +138,8 @@ const Testimonials = forwardRef((props, ref) => {
   const deleteTestimonial = (testimonialId) => {
     if (!window.confirm('¿Estás seguro de que quieres eliminar este testimonio?')) return;
     const token = localStorage.getItem('token');
-    fetch(`${API_URL}/testimonials/${testimonialId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
+    apiFetch(`${API_URL}/testimonials/${testimonialId}`, { method: 'DELETE' })
       .then(res => {
-        if (res.status === 403) {
-          alert('No autorizado');
-          return;
-        }
         if (!res.ok) throw new Error('Unauthorized');
         setTestimonials(prev => prev.filter(t => t._id !== testimonialId));
       })
