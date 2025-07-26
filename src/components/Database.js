@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
@@ -7,11 +7,13 @@ function Database() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [backupLoading, setBackupLoading] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
   const [selectedCollection, setSelectedCollection] = useState(null);
   const [collectionData, setCollectionData] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [collectionToDelete, setCollectionToDelete] = useState(null);
   const [stats, setStats] = useState({});
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     loadCollections();
@@ -80,6 +82,30 @@ function Database() {
       alert(`Error al crear respaldo: ${err.message}`);
     } finally {
       setBackupLoading(false);
+    }
+  };
+
+  const handleImportFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      setImportLoading(true);
+      const text = await file.text();
+      const backup = JSON.parse(text);
+      const resp = await fetch(`${API_URL}/database/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(backup)
+      });
+      if (!resp.ok) throw new Error('Failed to import backup');
+      alert('Respaldo importado exitosamente');
+      loadCollections();
+      loadDatabaseStats();
+    } catch (err) {
+      alert(`Error al importar respaldo: ${err.message}`);
+    } finally {
+      setImportLoading(false);
+      e.target.value = '';
     }
   };
 
@@ -184,25 +210,53 @@ function Database() {
               </p>
             </div>
           </div>
-          <button
-            onClick={createBackup}
-            disabled={backupLoading}
-            className="bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 text-white px-8 py-4 rounded-2xl font-bold shadow-2xl hover:shadow-3xl transition-all duration-300 hover:-translate-y-2 hover:scale-105 flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {backupLoading ? (
-              <>
-                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Creando...</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                <span>Crear Respaldo</span>
-              </>
-            )}
-          </button>
+          <div className="flex space-x-4">
+            <button
+              onClick={createBackup}
+              disabled={backupLoading}
+              className="bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 text-white px-8 py-4 rounded-2xl font-bold shadow-2xl hover:shadow-3xl transition-all duration-300 hover:-translate-y-2 hover:scale-105 flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {backupLoading ? (
+                <>
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Creando...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <span>Crear Respaldo</span>
+                </>
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json"
+              onChange={handleImportFile}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current && fileInputRef.current.click()}
+              disabled={importLoading}
+              className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-8 py-4 rounded-2xl font-bold shadow-2xl hover:shadow-3xl transition-all duration-300 hover:-translate-y-2 hover:scale-105 flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {importLoading ? (
+                <>
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Importando...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v14m7-7H5" />
+                  </svg>
+                  <span>Importar Respaldo</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Database Stats */}
