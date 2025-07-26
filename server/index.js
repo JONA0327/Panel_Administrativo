@@ -18,6 +18,7 @@ const Disease = require('./DB/diseases');
 const Testimonial = require('./DB/testimonials');
 const Activity = require('./DB/activities');
 const User = require('./DB/users');
+const Conversation = require('./DB/conversations');
 
 const app = express();
 app.use(cors());
@@ -1455,6 +1456,39 @@ app.get('/testimonials/:id/video', async (req, res) => {
   } catch (err) {
     console.error('Error streaming video:', err);
     res.status(500).json({ error: 'Failed to fetch video' });
+  }
+});
+
+// ----- Conversaciones -----
+app.get('/conversations', async (req, res) => {
+  try {
+    const convs = await Conversation.find({}, { messages: 0 });
+    res.json(convs);
+  } catch (err) {
+    console.error('Error fetching conversations:', err);
+    res.status(500).json({ error: 'Failed to fetch conversations' });
+  }
+});
+
+app.get('/conversations/:id', async (req, res) => {
+  try {
+    const conv = await Conversation.findById(req.params.id);
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    res.json(conv);
+  } catch (err) {
+    console.error('Error fetching conversation:', err);
+    res.status(500).json({ error: 'Failed to fetch conversation' });
+  }
+});
+
+app.delete('/conversations/:id', async (req, res) => {
+  try {
+    const conv = await Conversation.findByIdAndDelete(req.params.id);
+    if (!conv) return res.status(404).json({ error: 'Conversation not found' });
+    res.json({ message: 'Conversation deleted' });
+  } catch (err) {
+    console.error('Error deleting conversation:', err);
+    res.status(500).json({ error: 'Failed to delete conversation' });
   }
 });
 
