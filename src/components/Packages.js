@@ -1,4 +1,5 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { apiFetch } from '../utils/api';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
@@ -17,11 +18,11 @@ const Packages = forwardRef(({ products }, ref) => {
   const [availableProducts, setAvailableProducts] = useState([]);
   const [suggestMessage, setSuggestMessage] = useState('');
 
-  useEffect(() => {
-    fetch(`${API_URL}/packages`)
-      .then(res => res.json())
-      .then(setPackages)
-      .catch(err => console.error('Failed to load packages', err));
+    useEffect(() => {
+      apiFetch(`${API_URL}/packages`)
+        .then(res => res.json())
+        .then(setPackages)
+        .catch(err => console.error('Failed to load packages', err));
   }, []);
 
   useEffect(() => {
@@ -30,11 +31,11 @@ const Packages = forwardRef(({ products }, ref) => {
       setSuggestMessage('');
       return;
     }
-    fetch(`${API_URL}/packages/suggested`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: formData.name })
-    })
+      apiFetch(`${API_URL}/packages/suggested`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: formData.name })
+      })
       .then(res => res.json())
       .then(data => {
         setAvailableProducts(Array.isArray(data) ? data : []);
@@ -89,11 +90,11 @@ const Packages = forwardRef(({ products }, ref) => {
       productIds: formData.selectedProducts.map(p => p._id || p.id)
     };
     if (editingPackage) {
-      fetch(`${API_URL}/packages/${editingPackage._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
+        apiFetch(`${API_URL}/packages/${editingPackage._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
         .then(res => res.json())
         .then(updated => {
           setPackages(prev => prev.map(p => (p._id === updated._id ? updated : p)));
@@ -106,11 +107,11 @@ const Packages = forwardRef(({ products }, ref) => {
           setIsSaving(false);
         });
     } else {
-      fetch(`${API_URL}/packages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
+        apiFetch(`${API_URL}/packages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
         .then(res => res.json())
         .then(pkg => {
           setPackages(prev => [...prev, pkg]);
@@ -127,10 +128,10 @@ const Packages = forwardRef(({ products }, ref) => {
 
   const deletePackage = (packageId) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este paquete?')) {
-      fetch(`${API_URL}/packages/${packageId}`, { method: 'DELETE' })
-        .then(() => {
-          setPackages(prev => prev.filter(pkg => pkg._id !== packageId));
-        })
+        apiFetch(`${API_URL}/packages/${packageId}`, { method: 'DELETE' })
+          .then(() => {
+            setPackages(prev => prev.filter(pkg => pkg._id !== packageId));
+          })
         .catch(err => console.error('Failed to delete package', err));
     }
   };

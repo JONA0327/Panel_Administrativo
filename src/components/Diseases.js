@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../utils/api';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
@@ -18,17 +19,17 @@ function Diseases() {
     dosages: {}
   });
 
-  useEffect(() => {
-    fetch(`${API_URL}/diseases`)
-      .then(res => res.json())
-      .then(setDiseases)
-      .catch(err => console.error('Failed to load diseases', err));
+    useEffect(() => {
+      apiFetch(`${API_URL}/diseases`)
+        .then(res => res.json())
+        .then(setDiseases)
+        .catch(err => console.error('Failed to load diseases', err));
 
-    fetch(`${API_URL}/packages`)
-      .then(res => res.json())
-      .then(data => {
-        setAllPackages(data);
-        setDisplayPackages(data);
+      apiFetch(`${API_URL}/packages`)
+        .then(res => res.json())
+        .then(data => {
+          setAllPackages(data);
+          setDisplayPackages(data);
       })
       .catch(err => console.error('Failed to load packages', err));
   }, []);
@@ -36,11 +37,11 @@ function Diseases() {
   useEffect(() => {
     if (!formData.name) return;
 
-    fetch(`${API_URL}/diseases/describe`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: formData.name })
-    })
+      apiFetch(`${API_URL}/diseases/describe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: formData.name })
+      })
       .then(res => res.json())
       .then(data => {
         if (data.description)
@@ -48,11 +49,11 @@ function Diseases() {
       })
       .catch(err => console.error('Failed to describe disease', err));
 
-    fetch(`${API_URL}/diseases/recommend-package`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: formData.name })
-    })
+      apiFetch(`${API_URL}/diseases/recommend-package`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: formData.name })
+      })
       .then(res => res.json())
       .then(pkgs => {
         if (Array.isArray(pkgs)) {
@@ -112,11 +113,11 @@ function Diseases() {
     };
 
     if (editingDisease) {
-      fetch(`${API_URL}/diseases/${editingDisease._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
+        apiFetch(`${API_URL}/diseases/${editingDisease._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
         .then(res => res.json())
         .then(updated => {
           setDiseases(prev => prev.map(d => (d._id === updated._id ? updated : d)));
@@ -129,11 +130,11 @@ function Diseases() {
           setIsSaving(false);
         });
     } else {
-      fetch(`${API_URL}/diseases`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
+        apiFetch(`${API_URL}/diseases`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
         .then(res => res.json())
         .then(created => {
           setDiseases(prev => [...prev, created]);
@@ -150,9 +151,9 @@ function Diseases() {
 
   const deleteDisease = (id) => {
     if (!window.confirm('¿Estás seguro de que quieres eliminar esta enfermedad?')) return;
-    fetch(`${API_URL}/diseases/${id}`, { method: 'DELETE' })
-      .then(() => setDiseases(prev => prev.filter(d => d._id !== id)))
-      .catch(err => console.error('Failed to delete disease', err));
+      apiFetch(`${API_URL}/diseases/${id}`, { method: 'DELETE' })
+        .then(() => setDiseases(prev => prev.filter(d => d._id !== id)))
+        .catch(err => console.error('Failed to delete disease', err));
   };
 
   const closeModal = () => {
