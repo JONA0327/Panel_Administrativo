@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiFetch } from '../utils/api';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
@@ -6,7 +7,7 @@ function AdminUsers() {
   const [users, setUsers] = useState([]);
 
   const load = () => {
-    fetch(`${API_URL}/auth/users`)
+    apiFetch(`${API_URL}/auth/users`)
       .then(res => res.json())
       .then(setUsers)
       .catch(console.error);
@@ -15,14 +16,14 @@ function AdminUsers() {
   useEffect(load, []);
 
   const approve = id => {
-    fetch(`${API_URL}/auth/approve/${id}`, { method: 'PATCH' })
+    apiFetch(`${API_URL}/auth/approve/${id}`, { method: 'PATCH' })
       .then(res => res.json())
       .then(() => load())
       .catch(console.error);
   };
 
   const toggleDisable = (id, disabled) => {
-    fetch(`${API_URL}/auth/disable/${id}`, {
+    apiFetch(`${API_URL}/auth/disable/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ disabled: !disabled })
