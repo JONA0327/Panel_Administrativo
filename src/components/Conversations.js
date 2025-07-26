@@ -6,6 +6,7 @@ function Conversations() {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetch(`${API_URL}/conversations`)
@@ -16,13 +17,24 @@ function Conversations() {
   }, []);
 
   const openConversation = id => {
+    setError(null);
     fetch(`${API_URL}/conversations/${id}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch conversation');
+        return res.json();
+      })
       .then(data => setSelected(data))
-      .catch(err => console.error('Error fetching conversation:', err));
+      .catch(err => {
+        console.error('Error fetching conversation:', err);
+        setError('No se pudo cargar la conversación');
+        setSelected({ messages: [] });
+      });
   };
 
-  const closeModal = () => setSelected(null);
+  const closeModal = () => {
+    setSelected(null);
+    setError(null);
+  };
 
   const deleteConversation = id => {
     if (window.confirm('¿Estás seguro de que quieres eliminar esta conversación?')) {
@@ -90,9 +102,14 @@ function Conversations() {
               <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
             </div>
             <div className="p-4 space-y-4">
-              {Array.isArray(selected.messages) &&
+              {error ? (
+                <p className="text-center text-red-600">{error}</p>
+              ) : Array.isArray(selected.messages) && selected.messages.length ? (
                 selected.messages.map((msg, idx) => (
-                  <div key={idx} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    key={idx}
+                    className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
                     <div
                       className={`px-4 py-2 rounded-xl max-w-[80%] break-words ${
                         msg.type === 'user'
@@ -103,7 +120,12 @@ function Conversations() {
                       {msg.text || msg.message}
                     </div>
                   </div>
-                ))}
+                ))
+              ) : (
+                <p className="text-center text-slate-500">
+                  No hay mensajes para mostrar.
+                </p>
+              )}
             </div>
           </div>
         </div>
