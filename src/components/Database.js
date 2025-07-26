@@ -23,7 +23,10 @@ function Database() {
   const loadCollections = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/database/collections`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/database/collections`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       if (!response.ok) throw new Error('Failed to load collections');
       const data = await response.json();
       setCollections(data);
@@ -36,7 +39,10 @@ function Database() {
 
   const loadDatabaseStats = async () => {
     try {
-      const response = await fetch(`${API_URL}/database/stats`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/database/stats`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       if (!response.ok) throw new Error('Failed to load stats');
       const data = await response.json();
       setStats(data);
@@ -47,7 +53,11 @@ function Database() {
 
   const loadCollectionData = async (collectionName) => {
     try {
-      const response = await fetch(`${API_URL}/database/collections/${collectionName}/data`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${API_URL}/database/collections/${collectionName}/data`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       if (!response.ok) throw new Error('Failed to load collection data');
       const data = await response.json();
       setCollectionData(data);
@@ -60,9 +70,13 @@ function Database() {
   const createBackup = async () => {
     try {
       setBackupLoading(true);
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/database/backup`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
       });
       
       if (!response.ok) throw new Error('Failed to create backup');
@@ -92,9 +106,13 @@ function Database() {
       setImportLoading(true);
       const text = await file.text();
       const backup = JSON.parse(text);
+      const token = localStorage.getItem('token');
       const resp = await fetch(`${API_URL}/database/import`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
         body: JSON.stringify(backup)
       });
       if (!resp.ok) throw new Error('Failed to import backup');
@@ -111,8 +129,10 @@ function Database() {
 
   const deleteCollection = async (collectionName) => {
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/database/collections/${collectionName}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
       });
       
       if (!response.ok) throw new Error('Failed to delete collection');

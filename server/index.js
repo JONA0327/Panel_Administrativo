@@ -231,6 +231,8 @@ mongoose.connect(process.env.MONGODB_URI, {
 .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // ===== NUEVAS RUTAS PARA GESTIÓN DE BASE DE DATOS =====
+// Todas las rutas bajo /database requieren autenticación y permisos de administrador
+app.use('/database', auth, adminOnly);
 
 // Obtener lista de colecciones
 app.get('/database/collections', async (req, res) => {
