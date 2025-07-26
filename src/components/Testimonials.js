@@ -32,6 +32,10 @@ const Testimonials = forwardRef((props, ref) => {
       }
     })
       .then(async res => {
+        if (res.status === 403) {
+          alert('No autorizado');
+          return [];
+        }
         if (!res.ok) throw new Error('Unauthorized');
         return res.json();
       })
@@ -46,6 +50,10 @@ const Testimonials = forwardRef((props, ref) => {
       }
     })
       .then(async res => {
+        if (res.status === 403) {
+          alert('No autorizado');
+          return [];
+        }
         if (!res.ok) throw new Error('Unauthorized');
         return res.json();
       })
@@ -60,6 +68,10 @@ const Testimonials = forwardRef((props, ref) => {
       }
     })
       .then(async res => {
+        if (res.status === 403) {
+          alert('No autorizado');
+          return [];
+        }
         if (!res.ok) throw new Error('Unauthorized');
         return res.json();
       })
@@ -139,6 +151,10 @@ const Testimonials = forwardRef((props, ref) => {
       body: JSON.stringify(payload)
     })
       .then(async res => {
+        if (res.status === 403) {
+          alert('No autorizado');
+          throw new Error('Forbidden');
+        }
         if (!res.ok) throw new Error('Unauthorized');
         return res.json();
       })
@@ -165,6 +181,10 @@ const Testimonials = forwardRef((props, ref) => {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => {
+        if (res.status === 403) {
+          alert('No autorizado');
+          return;
+        }
         if (!res.ok) throw new Error('Unauthorized');
         setTestimonials(prev => prev.filter(t => t._id !== testimonialId));
       })

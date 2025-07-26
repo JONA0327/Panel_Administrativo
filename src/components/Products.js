@@ -122,6 +122,10 @@ const Products = forwardRef((props, ref) => {
   useEffect(() => {
     fetch(`${API_URL}/products`)
       .then(async res => {
+        if (res.status === 403) {
+          alert('No autorizado');
+          return [];
+        }
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           throw new Error(err.error || err.message || 'Failed to load products');
@@ -132,7 +136,13 @@ const Products = forwardRef((props, ref) => {
       .catch(err => console.error(err));
 
     fetch(`${API_URL}/config/subfolders`)
-      .then(res => res.json())
+      .then(async res => {
+        if (res.status === 403) {
+          alert('No autorizado');
+          return [];
+        }
+        return res.json();
+      })
       .then(setSubfolders)
       .catch(err => console.error('Failed to load subfolders', err));
   }, []);
@@ -237,6 +247,10 @@ const handleSubmit = (e) => {
     })
   })
     .then(async res => {
+      if (res.status === 403) {
+        alert('No autorizado');
+        throw new Error('Forbidden');
+      }
       if (!res.ok) {
         // Lee el JSON del error y construye un mensaje claro
         const payload = await res.json().catch(() => ({}));
@@ -275,12 +289,16 @@ const handleUpdate = (e) => {
       payload.image = formData.image;
     }
 
-    fetch(`${API_URL}/products/${editingProduct._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
+  fetch(`${API_URL}/products/${editingProduct._id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
       .then(async res => {
+        if (res.status === 403) {
+          alert('No autorizado');
+          throw new Error('Forbidden');
+        }
         if (!res.ok) {
           const payload = await res.json().catch(() => ({}));
           const msg = payload.error || payload.details || payload.message || 'Error al actualizar producto';
@@ -304,7 +322,11 @@ const handleUpdate = (e) => {
   const deleteProduct = (productId) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
       fetch(`${API_URL}/products/${productId}`, { method: 'DELETE' })
-        .then(() => {
+        .then(res => {
+          if (res.status === 403) {
+            alert('No autorizado');
+            return;
+          }
           setProducts(prev => prev.filter(product => product._id !== productId));
         })
         .catch(err => console.error(err));

@@ -189,6 +189,10 @@ function GoogleDriveAuth({ onAuthenticated }) {
       },
     })
       .then(async (res) => {
+        if (res.status === 403) {
+          alert("No autorizado");
+          return [];
+        }
         if (!res.ok) throw new Error("Unauthorized");
         return res.json();
       })
@@ -252,6 +256,10 @@ function GoogleDriveAuth({ onAuthenticated }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ folderId }),
       });
+      if (res.status === 403) {
+        alert("No autorizado");
+        return;
+      }
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
         throw new Error(
@@ -282,6 +290,10 @@ function GoogleDriveAuth({ onAuthenticated }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: subfolderName.trim() }),
       });
+      if (res.status === 403) {
+        alert("No autorizado");
+        return;
+      }
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
         throw new Error(
@@ -307,6 +319,10 @@ function GoogleDriveAuth({ onAuthenticated }) {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
+      if (res.status === 403) {
+        alert("No autorizado");
+        return;
+      }
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
         throw new Error(
@@ -339,6 +355,10 @@ function GoogleDriveAuth({ onAuthenticated }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ folderId: idMatch[0] }),
         });
+        if (res.status === 403) {
+          alert("No autorizado");
+          return;
+        }
         if (!res.ok) {
           const payload = await res.json().catch(() => ({}));
           throw new Error(
