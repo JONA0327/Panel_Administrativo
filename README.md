@@ -35,6 +35,8 @@ MONGODB_URI=<mongodb_uri>
 GOOGLE_SERVICE_ACCOUNT_PATH=<path_to_service_account_json>
 # Alternatively you can provide the JSON directly
 GOOGLE_SERVICE_ACCOUNT_JSON=<json_string>
+# When providing the JSON inline make sure newlines are escaped (e.g. \n)
+# or use GOOGLE_SERVICE_ACCOUNT_PATH to reference the file instead
 # Optional default folder where product images will be uploaded
 # If not provided, the folder can be configured at runtime from the UI
 GOOGLE_DRIVE_FOLDER_ID=<drive_folder_id>
@@ -42,6 +44,10 @@ GOOGLE_DRIVE_FOLDER_ID=<drive_folder_id>
 GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID=<drive_folder_id>
 ADMIN_EMAIL=<admin_email>
 ADMIN_PASSWORD=panelAdmin123456
+JWT_SECRET=<jwt_secret>
+BCRYPT_ROUNDS=10
+DEEPSEEK_API_KEY=<deepseek_api_key>
+DEEPSEEK_API_URL=<deepseek_api_url>
 ```
 
 `REACT_APP_API_URL` configures the base URL for API requests. If omitted, the
