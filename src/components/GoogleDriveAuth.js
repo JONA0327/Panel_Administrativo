@@ -57,8 +57,8 @@ function GoogleDriveAuth({ onAuthenticated }) {
 
         if (!isMounted) return;
 
-        const savedToken = localStorage.getItem("drive_token");
-        const savedExp = parseInt(localStorage.getItem("drive_token_exp"), 10);
+        let savedToken = localStorage.getItem("drive_token");
+        let savedExp = parseInt(localStorage.getItem("drive_token_exp"), 10);
         const savedEmail = localStorage.getItem("drive_email");
         let savedFolderPath = localStorage.getItem("drive_folder_path");
         let savedFolderId = localStorage.getItem("drive_folder_id");
@@ -75,6 +75,26 @@ function GoogleDriveAuth({ onAuthenticated }) {
             }
           } catch (err) {
             console.error("Failed to load folder ID from server", err);
+          }
+        }
+
+        if ((!savedToken || !savedExp || Date.now() >= savedExp) && localStorage.getItem("token")) {
+          try {
+            const jwt = localStorage.getItem("token");
+            const resp = await fetch(`${API_URL}/config/drive-token`, {
+              headers: { Authorization: `Bearer ${jwt}` }
+            });
+            if (resp.ok) {
+              const data = await resp.json();
+              if (data.token && data.exp && Date.now() < data.exp) {
+                savedToken = data.token;
+                savedExp = data.exp;
+                localStorage.setItem("drive_token", data.token);
+                localStorage.setItem("drive_token_exp", data.exp.toString());
+              }
+            }
+          } catch (err) {
+            console.error("Failed to load Drive token from server", err);
           }
         }
 
@@ -118,6 +138,19 @@ function GoogleDriveAuth({ onAuthenticated }) {
           }
           localStorage.setItem("drive_token", accessToken);
           localStorage.setItem("drive_token_exp", expiration.toString());
+          try {
+            const jwt = localStorage.getItem("token");
+            await fetch(`${API_URL}/config/drive-token`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${jwt}`
+              },
+              body: JSON.stringify({ token: accessToken, exp: expiration })
+            });
+          } catch (err) {
+            console.error("Failed to store token on server", err);
+          }
           if (!isMounted) return;
           setIsAuthenticated(true);
           setShowFolderOptions(true);
@@ -301,6 +334,17 @@ function GoogleDriveAuth({ onAuthenticated }) {
       window.google.accounts.oauth2.revoke(token, () => {
         window.gapi.client.setToken("");
       });
+    }
+    if (localStorage.getItem("token")) {
+      const jwt = localStorage.getItem("token");
+      fetch(`${API_URL}/config/drive-token`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`
+        },
+        body: JSON.stringify({ token: "", exp: 0 })
+      }).catch(() => {});
     }
     localStorage.removeItem("drive_token");
     localStorage.removeItem("drive_token_exp");
