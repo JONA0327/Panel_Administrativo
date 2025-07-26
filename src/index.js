@@ -12,7 +12,7 @@ window.fetch = async (url, options = {}) => {
 
   const response = await originalFetch(url, { ...options, headers });
 
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     localStorage.removeItem('token');
     localStorage.removeItem('approved');
     localStorage.removeItem('isAdmin');

@@ -10,7 +10,13 @@ function Conversations() {
 
   useEffect(() => {
     fetch(`${API_URL}/conversations`)
-      .then(res => res.json())
+      .then(async res => {
+        if (res.status === 403) {
+          alert('No autorizado');
+          return [];
+        }
+        return res.json();
+      })
       .then(data => setConversations(Array.isArray(data) ? data : []))
       .catch(err => console.error('Error fetching conversations:', err))
       .finally(() => setLoading(false));
@@ -20,6 +26,10 @@ function Conversations() {
     setError(null);
     fetch(`${API_URL}/conversations/${id}`)
       .then(res => {
+        if (res.status === 403) {
+          alert('No autorizado');
+          throw new Error('Forbidden');
+        }
         if (!res.ok) throw new Error('Failed to fetch conversation');
         return res.json();
       })
@@ -39,7 +49,13 @@ function Conversations() {
   const deleteConversation = id => {
     if (window.confirm('¿Estás seguro de que quieres eliminar esta conversación?')) {
       fetch(`${API_URL}/conversations/${id}`, { method: 'DELETE' })
-        .then(() => setConversations(prev => prev.filter(c => c._id !== id)))
+        .then(res => {
+          if (res.status === 403) {
+            alert('No autorizado');
+            return;
+          }
+          setConversations(prev => prev.filter(c => c._id !== id));
+        })
         .catch(err => console.error('Error deleting conversation:', err));
     }
   };
