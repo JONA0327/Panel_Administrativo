@@ -617,12 +617,12 @@ app.get('/config/drive-folder', (req, res) => {
 });
 
 // Obtener token de Google Drive
-app.get('/config/drive-token', (req, res) => {
+app.get('/config/drive-token', adminOnly, (req, res) => {
   res.json({ token: driveAccessToken, exp: driveTokenExp });
 });
 
 // Guardar token de Google Drive
-app.post('/config/drive-token', async (req, res) => {
+app.post('/config/drive-token', adminOnly, async (req, res) => {
   const { token, exp } = req.body || {};
   try {
     const cfg = await Config.findOneAndUpdate(
