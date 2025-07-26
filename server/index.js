@@ -82,6 +82,8 @@ const serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
 const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 let driveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID || null;
 let testimonialsFolderId = process.env.GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID || null;
+let driveAccessToken = null;
+let driveTokenExp = 0;
 let drive;
 let serviceAccountCreds = null;
 
@@ -134,6 +136,10 @@ mongoose.connect(process.env.MONGODB_URI, {
   if (cfg && cfg.testimonialsFolderId) {
     testimonialsFolderId = cfg.testimonialsFolderId;
     console.log(`🗂️  Testimonials folder cargado desde DB. Folder ID: ${testimonialsFolderId}`);
+  }
+  if (cfg && cfg.driveAccessToken) {
+    driveAccessToken = cfg.driveAccessToken;
+    driveTokenExp = cfg.driveTokenExp || 0;
   }
 
   // Si tenemos drive y carpeta, compartimos la carpeta con la cuenta de servicio
@@ -516,6 +522,29 @@ app.post('/config/drive-folder', async (req, res) => {
 // Obtener carpeta actual de Drive
 app.get('/config/drive-folder', (req, res) => {
   res.json({ folderId: driveFolderId });
+});
+
+// Obtener token de Google Drive
+app.get('/config/drive-token', (req, res) => {
+  res.json({ token: driveAccessToken, exp: driveTokenExp });
+});
+
+// Guardar token de Google Drive
+app.post('/config/drive-token', async (req, res) => {
+  const { token, exp } = req.body || {};
+  try {
+    const cfg = await Config.findOneAndUpdate(
+      {},
+      { driveAccessToken: token || '', driveTokenExp: exp || 0 },
+      { new: true, upsert: true }
+    );
+    driveAccessToken = cfg.driveAccessToken;
+    driveTokenExp = cfg.driveTokenExp;
+    res.json({ message: 'Drive token updated' });
+  } catch (err) {
+    console.error('Error saving Drive token:', err);
+    res.status(500).json({ error: 'Failed to save token' });
+  }
 });
 
 // Configurar carpeta de Drive para testimonios

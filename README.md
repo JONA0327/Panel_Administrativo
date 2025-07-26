@@ -107,6 +107,16 @@ npm run dev           # start with nodemon
 
 The server listens on port `4000` by default.
 
+### Drive access tokens
+
+The `/config/drive-token` endpoint persists the Google Drive OAuth token in
+MongoDB. `GET /config/drive-token` returns `{ token, exp }` while
+`POST /config/drive-token` updates these values. The React client automatically
+loads any stored token on startup and saves new tokens whenever a user
+authenticates. Signing out sends an empty token so the server record is cleared.
+This lets the Drive connection survive browser restarts without requiring the
+user to log in again.
+
 ### Serving product images
 
 Images uploaded to Google Drive can be retrieved through the new endpoint:
