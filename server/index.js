@@ -366,6 +366,32 @@ app.post('/database/backup', async (req, res) => {
   }
 });
 
+// Importar respaldo de la base de datos
+app.post('/database/import', async (req, res) => {
+  try {
+    const { collections } = req.body || {};
+    if (!collections || typeof collections !== 'object') {
+      return res.status(400).json({ error: 'Invalid backup data' });
+    }
+
+    const db = mongoose.connection.db;
+
+    for (const [name, docs] of Object.entries(collections)) {
+      if (!Array.isArray(docs)) continue;
+      const col = db.collection(name);
+      await col.deleteMany({});
+      if (docs.length > 0) {
+        await col.insertMany(docs);
+      }
+    }
+
+    res.json({ message: 'Backup imported successfully' });
+  } catch (err) {
+    console.error('Error importing backup:', err);
+    res.status(500).json({ error: 'Failed to import backup' });
+  }
+});
+
 // ===== FIN DE RUTAS DE BASE DE DATOS =====
 
 // ----- Rutas de autenticación -----
