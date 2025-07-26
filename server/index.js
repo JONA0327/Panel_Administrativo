@@ -66,6 +66,41 @@ function adminOnly(req, res, next) {
   }
   next();
 }
+
+async function loadConfigFromDB() {
+  try {
+    const cfg = await Config.findOne();
+    if (cfg) {
+      if (cfg.driveFolderId) {
+        driveFolderId = cfg.driveFolderId;
+      }
+      if (cfg.testimonialsFolderId) {
+        testimonialsFolderId = cfg.testimonialsFolderId;
+      }
+      if (cfg.driveAccessToken) {
+        driveAccessToken = cfg.driveAccessToken;
+      }
+      driveTokenExp = cfg.driveTokenExp || 0;
+    }
+  } catch (err) {
+    console.error('Error loading config from DB:', err.message);
+  }
+}
+
+async function ensureAdminAccount() {
+  if (!ADMIN_EMAIL) return;
+  let adminUser = await User.findOne({ email: ADMIN_EMAIL });
+  if (!adminUser) {
+    const hash = await bcrypt.hash(ADMIN_PASSWORD, BCRYPT_ROUNDS);
+    await User.create({
+      email: ADMIN_EMAIL,
+      name: 'Admin',
+      passwordHash: hash,
+      approved: true
+    });
+    console.log(`✅ Admin user ${ADMIN_EMAIL} creado`);
+  }
+}
 const imageCacheDir = path.join(__dirname, 'image_cache');
 if (!fs.existsSync(imageCacheDir)) {
   fs.mkdirSync(imageCacheDir, { recursive: true });
@@ -384,8 +419,10 @@ app.post('/database/import', async (req, res) => {
         await col.insertMany(docs);
       }
     }
+    await loadConfigFromDB();
+    await ensureAdminAccount();
 
-    res.json({ message: 'Backup imported successfully' });
+    res.json({ message: 'Backup imported successfully', refresh: true });
   } catch (err) {
     console.error('Error importing backup:', err);
     res.status(500).json({ error: 'Failed to import backup' });
