@@ -38,8 +38,9 @@ async function logActivity(action, details, userId) {
 }
 
 async function auth(req, res, next) {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.replace('Bearer ', '');
+  const authHeader = (req.headers['authorization'] || '').trim();
+  const parts = authHeader.split(/\s+/);
+  const token = parts.length === 2 && parts[0] === 'Bearer' ? parts[1] : null;
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
