@@ -156,63 +156,74 @@ const Packages = forwardRef(({ products }, ref) => {
   }));
 
   return (
-    <main className="flex-1 p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-y-auto min-h-screen">
+    <main className="flex-1 p-8 bg-gradient-to-br from-slate-50 via-purple-50/30 to-violet-50/30 overflow-y-auto min-h-screen">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-2">
-              Gestión de Paquetes 🎁
-            </h1>
-            <p className="text-slate-600 text-lg">
-              Crea y administra paquetes de productos
-            </p>
+        <div className="flex justify-between items-center mb-12">
+          <div className="flex items-center space-x-6">
+            <div className="w-20 h-20 bg-gradient-to-br from-purple-500 via-violet-500 to-indigo-500 rounded-3xl flex items-center justify-center shadow-2xl">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent mb-2">
+                Gestión de Paquetes
+              </h1>
+              <p className="text-slate-600 text-xl font-medium">
+                Crea y administra paquetes de productos con estilo
+              </p>
+            </div>
           </div>
           <button
             onClick={openAddModal}
-            className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 flex items-center space-x-2"
+            className="bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 text-white px-8 py-4 rounded-2xl font-bold shadow-2xl hover:shadow-3xl transition-all duration-300 hover:-translate-y-2 hover:scale-105 flex items-center space-x-3"
           >
-            <span className="text-lg">➕</span>
-            <span>Crear Nuevo Paquete</span>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span>Crear Paquete</span>
           </button>
         </div>
 
         {/* Packages Grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {packages.map((pkg) => (
-            <div key={pkg._id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div className="mb-4">
-                <div className="flex -space-x-2 mb-3">
+            <div key={pkg._id} className="group relative bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 hover:scale-105">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-violet-500/10 to-indigo-500/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="relative">
+                <div className="mb-6">
+                  <div className="flex -space-x-3 mb-4">
                   {pkg.products.slice(0, 3).map((product, index) => (
                     <img
                       key={product._id}
                       src={product.localImage ? `${API_URL}${product.localImage}` : product.image}
                       alt={product.name}
-                      className="w-12 h-12 rounded-full border-2 border-white object-cover"
+                        className="w-16 h-16 rounded-2xl border-4 border-white object-cover shadow-lg group-hover:shadow-xl transition-shadow duration-300"
                       style={{ zIndex: pkg.products.length - index }}
                     />
                   ))}
                   {pkg.products.length > 3 && (
-                    <div className="w-12 h-12 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-xs font-semibold text-slate-600">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-200 to-slate-300 border-4 border-white flex items-center justify-center text-sm font-bold text-slate-600 shadow-lg">
                       +{pkg.products.length - 3}
                     </div>
                   )}
                 </div>
-                <h3 className="text-lg font-semibold text-slate-800 mb-2">{pkg.name}</h3>
-                <p className="text-sm text-slate-600 mb-3">{pkg.description}</p>
-                <div className="space-y-1 mb-4">
+                  <h3 className="text-2xl font-bold text-slate-800 mb-3 group-hover:text-slate-900">{pkg.name}</h3>
+                  <p className="text-sm text-slate-600 mb-4 font-medium">{pkg.description}</p>
+                  <div className="space-y-2 mb-6">
                   {pkg.products.map((product) => (
-                    <div key={product._id} className="flex justify-between text-xs text-slate-500">
-                      <span>{product.name}</span>
-                      <span>{product.currency} ${product.price}</span>
+                      <div key={product._id} className="flex justify-between text-sm text-slate-600 bg-slate-50 px-3 py-2 rounded-xl">
+                        <span className="font-medium">{product.name}</span>
+                        <span className="font-bold">{product.currency} ${product.price}</span>
                     </div>
                   ))}
                 </div>
-                <div className="flex justify-between items-center pt-2 border-t border-slate-200">
-                  <span className="text-xl font-bold text-slate-800">
+                  <div className="flex justify-between items-center pt-4 border-t border-slate-200">
+                    <span className="text-3xl font-black bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
                     USD ${pkg.totalPrice.toFixed(2)}
                   </span>
-                  <div className="flex space-x-2">
+                    <div className="flex space-x-3">
                     <button
                       onClick={() => {
                         setEditingPackage(pkg);
@@ -223,18 +234,19 @@ const Packages = forwardRef(({ products }, ref) => {
                         });
                         setIsModalOpen(true);
                       }}
-                      className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                        className="text-blue-600 hover:text-blue-700 font-bold text-sm transition-colors duration-200"
                     >
                       Editar
                     </button>
                     <button 
                       onClick={() => deletePackage(pkg._id)}
-                      className="text-red-600 hover:text-red-700 font-medium text-sm"
+                        className="text-red-600 hover:text-red-700 font-bold text-sm transition-colors duration-200"
                     >
                       Eliminar
                     </button>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           ))}

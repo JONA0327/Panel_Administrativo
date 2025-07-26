@@ -329,24 +329,33 @@ const handleUpdate = (e) => {
   };
 
   return (
-    <main className="flex-1 p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-y-auto min-h-screen">
+    <main className="flex-1 p-8 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 overflow-y-auto min-h-screen">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-2">
-              Gestión de Productos 📦
-            </h1>
-            <p className="text-slate-600 text-lg">
-              Administra tu catálogo de productos
-            </p>
+        <div className="flex justify-between items-center mb-12">
+          <div className="flex items-center space-x-6">
+            <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-3xl flex items-center justify-center shadow-2xl">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent mb-2">
+                Gestión de Productos
+              </h1>
+              <p className="text-slate-600 text-xl font-medium">
+                Administra tu catálogo de productos con estilo moderno
+              </p>
+            </div>
           </div>
           <button
             onClick={openAddModal}
-            className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 flex items-center space-x-2"
+            className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white px-8 py-4 rounded-2xl font-bold shadow-2xl hover:shadow-3xl transition-all duration-300 hover:-translate-y-2 hover:scale-105 flex items-center space-x-3"
           >
-            <span className="text-lg">➕</span>
-            <span>Crear Nuevo Producto</span>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span>Crear Producto</span>
           </button>
         </div>
         {submitError && (
@@ -354,33 +363,35 @@ const handleUpdate = (e) => {
         )}
 
         {/* Products Grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {products.map((product) => (
             <div
               key={product._id}
-              className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+              className="group relative bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-6 hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 hover:scale-105 cursor-pointer"
               onClick={() => openInfoModal(product)}
             >
-              <div className="mb-4">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-cyan-500/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="relative">
+                <div className="mb-6">
                 <img
                   src={product.localImage ? `${API_URL}${product.localImage}` : product.image}
                   alt={product.name}
-                  className="w-full h-40 object-cover rounded-xl"
+                  className="w-full h-48 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-shadow duration-300"
                 />
               </div>
-              <div className="space-y-3">
+                <div className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-800">{product.name}</h3>
-                  <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+                    <h3 className="text-xl font-bold text-slate-800 mb-2 group-hover:text-slate-900">{product.name}</h3>
+                    <span className="inline-block px-3 py-1 bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 text-xs rounded-full font-bold border border-emerald-200">
                     {product.category}
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-2">
                   {Array.isArray(product.keywords)
                     ? product.keywords.map((keyword, index) => (
                         <span
                           key={index}
-                          className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-md"
+                            className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-lg font-medium border border-slate-200"
                         >
                           #{keyword}
                         </span>
@@ -388,19 +399,24 @@ const handleUpdate = (e) => {
                     : null}
                 </div>
                 {product.subfolderId && (
-                  <p className="text-xs text-slate-500">📁 {subfolderMap[product.subfolderId] || product.subfolderId}</p>
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                      </svg>
+                      <p className="text-xs text-slate-500 font-medium">{subfolderMap[product.subfolderId] || product.subfolderId}</p>
+                    </div>
                 )}
-                <div className="flex justify-between items-center pt-2">
-                  <span className="text-xl font-bold text-slate-800">
+                  <div className="flex justify-between items-center pt-4 border-t border-slate-100">
+                    <span className="text-2xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                     {product.currency} ${product.price}
                   </span>
-                  <div className="flex space-x-2">
+                    <div className="flex space-x-3">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         openEditModal(product);
                       }}
-                      className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                        className="text-blue-600 hover:text-blue-700 font-bold text-sm transition-colors duration-200"
                     >
                       Editar
                     </button>
@@ -409,12 +425,13 @@ const handleUpdate = (e) => {
                         e.stopPropagation();
                         deleteProduct(product._id);
                       }}
-                      className="text-red-600 hover:text-red-700 font-medium text-sm"
+                        className="text-red-600 hover:text-red-700 font-bold text-sm transition-colors duration-200"
                     >
                       Eliminar
                     </button>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           ))}

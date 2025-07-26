@@ -2,37 +2,103 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 body {
-  @apply m-0 bg-gray-50 min-h-screen;
+  @apply m-0 bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/20 min-h-screen;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
 * {
   @apply scroll-smooth;
 }
 
-/* Custom scrollbar */
+/* Enhanced scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+  @apply bg-slate-100/50 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full;
+  @apply bg-gradient-to-b from-slate-300 to-slate-400 rounded-full shadow-sm;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
+  @apply from-slate-400 to-slate-500;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar-corner {
+  @apply bg-transparent;
+}
+
+/* Enhanced animations and transitions */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(59, 130, 246, 0.6); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
 }
 
 /* Smooth transitions for all interactive elements */
 button, a, [role="button"] {
-  @apply transition-all duration-200;
+  @apply transition-all duration-300 ease-out;
+}
+
+/* Enhanced focus styles */
+button:focus-visible, 
+input:focus-visible, 
+textarea:focus-visible, 
+select:focus-visible {
+  @apply outline-none ring-4 ring-blue-500/20 ring-offset-2 ring-offset-white;
+}
+
+/* Glass morphism utility classes */
+.glass {
+  @apply bg-white/80 backdrop-blur-xl border border-white/50;
+}
+
+.glass-dark {
+  @apply bg-slate-900/80 backdrop-blur-xl border border-slate-700/50;
+}
+
+/* Modern shadow utilities */
+.shadow-3xl {
+  box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.25);
+}
+
+.shadow-4xl {
+  box-shadow: 0 45px 100px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Gradient text utilities */
+.text-gradient {
+  @apply bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent;
+}
+
+/* Modern card hover effects */
+.card-hover {
+  @apply transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 hover:scale-105;
+}
+
+/* Loading spinner */
+.spinner {
+  @apply w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin;
 }

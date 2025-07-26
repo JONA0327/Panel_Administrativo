@@ -198,65 +198,77 @@ const Testimonials = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => ({ openAddModal }));
 
   return (
-    <main className="flex-1 p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-y-auto min-h-screen">
+    <main className="flex-1 p-8 bg-gradient-to-br from-slate-50 via-orange-50/30 to-amber-50/30 overflow-y-auto min-h-screen">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-2">
-              Gestión de Testimonios 💬
-            </h1>
-            <p className="text-slate-600 text-lg">
-              Administra testimonios en video de tus clientes
-            </p>
+        <div className="flex justify-between items-center mb-12">
+          <div className="flex items-center space-x-6">
+            <div className="w-20 h-20 bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 rounded-3xl flex items-center justify-center shadow-2xl">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent mb-2">
+                Gestión de Testimonios
+              </h1>
+              <p className="text-slate-600 text-xl font-medium">
+                Administra testimonios en video con estilo profesional
+              </p>
+            </div>
           </div>
           <button
             onClick={openAddModal}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 flex items-center space-x-2"
+            className="bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 text-white px-8 py-4 rounded-2xl font-bold shadow-2xl hover:shadow-3xl transition-all duration-300 hover:-translate-y-2 hover:scale-105 flex items-center space-x-3"
           >
-            <span className="text-lg">➕</span>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
             <span>Subir Testimonio</span>
           </button>
         </div>
 
         {/* Testimonials Grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {testimonials.map((testimonial) => (
-            <div key={testimonial._id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div className="mb-4">
+            <div key={testimonial._id} className="group relative bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-6 hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 hover:scale-105">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-amber-500/10 to-yellow-500/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="relative">
+                <div className="mb-6">
                 <video
                   src={testimonial.localVideo ? `${API_URL}${testimonial.localVideo}` : testimonial.video}
-                  className="w-full h-48 object-cover rounded-xl"
+                    className="w-full h-56 object-cover rounded-2xl shadow-lg group-hover:shadow-xl transition-shadow duration-300"
                   controls
                   poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f1f5f9'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='12' fill='%2364748b' text-anchor='middle' dy='.3em'%3EVideo%3C/text%3E%3C/svg%3E"
                 />
               </div>
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold text-slate-800">{testimonial.name}</h3>
+                <div className="space-y-4">
+                  <h3 className="text-xl font-bold text-slate-800 group-hover:text-slate-900">{testimonial.name}</h3>
                 <div>
-                  <p className="text-sm text-slate-600 mb-2">Productos asociados:</p>
-                  <div className="flex flex-wrap gap-1">
+                    <p className="text-sm text-slate-600 mb-3 font-semibold">Productos asociados:</p>
+                    <div className="flex flex-wrap gap-2">
                     {testimonial.associatedProducts.map((pid, index) => (
-                      <span key={index} className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
+                        <span key={index} className="px-3 py-1 bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 text-xs rounded-full font-bold border border-orange-200">
                         {productMap[pid] || pid}
                       </span>
                     ))}
                   </div>
                 </div>
-                <div className="flex justify-end space-x-2 pt-2">
+                  <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
                   <button
                     onClick={() => openEditModal(testimonial)}
-                    className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                      className="text-blue-600 hover:text-blue-700 font-bold text-sm transition-colors duration-200"
                   >
                     Editar
                   </button>
                   <button
                     onClick={() => deleteTestimonial(testimonial._id)}
-                    className="text-red-600 hover:text-red-700 font-medium text-sm"
+                      className="text-red-600 hover:text-red-700 font-bold text-sm transition-colors duration-200"
                   >
                     Eliminar
                   </button>
                 </div>
+              </div>
               </div>
             </div>
           ))}

@@ -163,64 +163,76 @@ function Diseases() {
   };
 
   return (
-    <main className="flex-1 p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-y-auto min-h-screen">
+    <main className="flex-1 p-8 bg-gradient-to-br from-slate-50 via-red-50/30 to-pink-50/30 overflow-y-auto min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-2">
-              Índice de Enfermedades 🏥
-            </h1>
-            <p className="text-slate-600 text-lg">Gestiona enfermedades y sus tratamientos sugeridos</p>
+        <div className="flex justify-between items-center mb-12">
+          <div className="flex items-center space-x-6">
+            <div className="w-20 h-20 bg-gradient-to-br from-red-500 via-pink-500 to-rose-500 rounded-3xl flex items-center justify-center shadow-2xl">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent mb-2">
+                Índice de Enfermedades
+              </h1>
+              <p className="text-slate-600 text-xl font-medium">Gestiona enfermedades y tratamientos con precisión</p>
+            </div>
           </div>
           <button
             onClick={() => { setIsModalOpen(true); setEditingDisease(null); }}
-            className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-1 flex items-center space-x-2"
+            className="bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 text-white px-8 py-4 rounded-2xl font-bold shadow-2xl hover:shadow-3xl transition-all duration-300 hover:-translate-y-2 hover:scale-105 flex items-center space-x-3"
           >
-            <span className="text-lg">➕</span>
-            <span>{editingDisease ? 'Editar Enfermedad' : 'Añadir Enfermedad'}</span>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span>Añadir Enfermedad</span>
           </button>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2">
+        <div className="grid gap-8 sm:grid-cols-1 lg:grid-cols-2">
           {diseases.map(disease => (
-            <div key={disease._id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div className="mb-4">
-                <h3 className="text-xl font-semibold text-slate-800 mb-2">{disease.name}</h3>
-                <p className="text-sm text-slate-600 mb-4">{disease.description}</p>
+            <div key={disease._id} className="group relative bg-white/90 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 hover:scale-105">
+              <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 via-pink-500/10 to-rose-500/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="relative">
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold text-slate-800 mb-3 group-hover:text-slate-900">{disease.name}</h3>
+                  <p className="text-sm text-slate-600 mb-6 font-medium leading-relaxed">{disease.description}</p>
                 {disease.package && (
-                  <div className="bg-blue-50 p-4 rounded-xl">
-                    <h4 className="font-semibold text-slate-700 mb-3">Paquete Sugerido: {disease.package.name}</h4>
-                    <div className="space-y-3">
+                    <div className="bg-gradient-to-br from-red-50 to-pink-50 p-6 rounded-2xl border border-red-100">
+                      <h4 className="font-bold text-slate-800 mb-4 text-lg">Paquete Sugerido: {disease.package.name}</h4>
+                      <div className="space-y-4">
                       {disease.dosages.map(d => (
-                        <div key={d.product._id} className="flex items-center space-x-3 bg-white p-3 rounded-lg">
+                          <div key={d.product._id} className="flex items-center space-x-4 bg-white p-4 rounded-xl shadow-sm">
                           <img
                             src={d.product.localImage ? `${API_URL}${d.product.localImage}` : d.product.image}
                             alt={d.product.name}
-                            className="w-10 h-10 rounded-lg object-cover"
+                              className="w-12 h-12 rounded-xl object-cover shadow-md"
                           />
                           <div className="flex-1">
-                            <p className="font-medium text-slate-800">{d.product.name}</p>
-                            <p className="text-sm text-slate-500">{d.dosage}</p>
+                              <p className="font-bold text-slate-800">{d.product.name}</p>
+                              <p className="text-sm text-slate-600 font-medium">{d.dosage}</p>
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-                <div className="flex justify-end space-x-2 mt-4">
+                  <div className="flex justify-end space-x-3 mt-6">
                   <button
                     onClick={() => openEditModal(disease)}
-                    className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                      className="text-blue-600 hover:text-blue-700 font-bold text-sm transition-colors duration-200"
                   >
                     Editar
                   </button>
                   <button
                     onClick={() => deleteDisease(disease._id)}
-                    className="text-red-600 hover:text-red-700 font-medium text-sm"
+                      className="text-red-600 hover:text-red-700 font-bold text-sm transition-colors duration-200"
                   >
                     Eliminar
                   </button>
                 </div>
+              </div>
               </div>
             </div>
           ))}

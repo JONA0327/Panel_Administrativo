@@ -60,32 +60,48 @@ function Conversations() {
   }
 
   return (
-    <main className="flex-1 p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-y-auto min-h-screen">
+    <main className="flex-1 p-8 bg-gradient-to-br from-slate-50 via-indigo-50/30 to-blue-50/30 overflow-y-auto min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-2">
-            Conversaciones 💬
-          </h1>
-          <p className="text-slate-600 text-lg">Historial de conversaciones</p>
+        <div className="mb-12">
+          <div className="flex items-center space-x-6">
+            <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 via-blue-500 to-cyan-500 rounded-3xl flex items-center justify-center shadow-2xl">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 bg-clip-text text-transparent mb-2">
+                Conversaciones
+              </h1>
+              <p className="text-slate-600 text-xl font-medium">Historial completo de conversaciones del sistema</p>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           {conversations.map(conv => (
             <div
               key={conv._id}
               onClick={() => openConversation(conv._id)}
-              className="p-4 rounded-xl bg-white/80 backdrop-blur-sm border border-white/20 cursor-pointer flex justify-between items-center hover:bg-white"
+              className="group p-6 rounded-2xl bg-white/90 backdrop-blur-xl border border-white/50 cursor-pointer flex justify-between items-center hover:bg-white hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
             >
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </div>
               <div>
-                <p className="font-semibold text-slate-800">{conv.sessionId || 'Sin sesión'}</p>
-                <p className="text-xs text-slate-500">{conv._id}</p>
+                  <p className="font-bold text-slate-800 text-lg group-hover:text-slate-900">{conv.sessionId || 'Sin sesión'}</p>
+                  <p className="text-sm text-slate-500 font-medium">{conv._id}</p>
+                </div>
               </div>
               <button
                 onClick={e => {
                   e.stopPropagation();
                   deleteConversation(conv._id);
                 }}
-                className="text-red-600 hover:text-red-700 text-sm"
+                className="text-red-600 hover:text-red-700 font-bold text-sm transition-colors duration-200 px-4 py-2 rounded-xl hover:bg-red-50"
               >
                 Eliminar
               </button>
