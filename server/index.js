@@ -660,6 +660,28 @@ app.get('/config/subfolders', async (req, res) => {
   }
 });
 
+// Eliminar una subcarpeta registrada y opcionalmente su carpeta en Drive
+app.delete('/config/subfolders/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await Config.updateOne({}, { $pull: { subfolders: { folderId: id } } });
+
+    if (drive) {
+      try {
+        await drive.files.delete({ fileId: id });
+      } catch (err) {
+        console.warn('⚠️  Error deleting Drive subfolder:', err.message);
+      }
+    }
+
+    await logActivity('Config updated', `Subfolder ${id} deleted`, req.user?._id);
+    res.json({ message: 'Subfolder deleted' });
+  } catch (err) {
+    console.error('Error deleting subfolder:', err);
+    res.status(500).json({ error: 'Failed to delete subfolder', details: err.message });
+  }
+});
+
 async function createUserFolder(name) {
   if (!drive || !driveFolderId) throw new Error('Drive not configured');
   const fileMetadata = {
