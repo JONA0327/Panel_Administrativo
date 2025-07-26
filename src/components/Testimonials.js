@@ -1,4 +1,5 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { apiFetch } from '../utils/api';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
