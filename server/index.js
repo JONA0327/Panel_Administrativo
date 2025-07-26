@@ -49,6 +49,7 @@ async function auth(req, res, next) {
     req.user = user;
     next();
   } catch (err) {
+    console.error('JWT verification failed:', err);
     return res.status(401).json({ error: 'Invalid token' });
   }
 }
