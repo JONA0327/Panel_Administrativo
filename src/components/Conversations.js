@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiFetch } from '../utils/api';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
@@ -9,11 +10,11 @@ function Conversations() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/conversations`)
-      .then(async res => {
-        if (res.status === 403) {
-          alert('No autorizado');
-          return [];
+      apiFetch(`${API_URL}/conversations`)
+        .then(async res => {
+          if (res.status === 403) {
+            alert('No autorizado');
+            return [];
         }
         return res.json();
       })
@@ -24,11 +25,11 @@ function Conversations() {
 
   const openConversation = id => {
     setError(null);
-    fetch(`${API_URL}/conversations/${id}`)
-      .then(res => {
-        if (res.status === 403) {
-          alert('No autorizado');
-          throw new Error('Forbidden');
+      apiFetch(`${API_URL}/conversations/${id}`)
+        .then(res => {
+          if (res.status === 403) {
+            alert('No autorizado');
+            throw new Error('Forbidden');
         }
         if (!res.ok) throw new Error('Failed to fetch conversation');
         return res.json();
@@ -48,11 +49,11 @@ function Conversations() {
 
   const deleteConversation = id => {
     if (window.confirm('¿Estás seguro de que quieres eliminar esta conversación?')) {
-      fetch(`${API_URL}/conversations/${id}`, { method: 'DELETE' })
-        .then(res => {
-          if (res.status === 403) {
-            alert('No autorizado');
-            return;
+        apiFetch(`${API_URL}/conversations/${id}`, { method: 'DELETE' })
+          .then(res => {
+            if (res.status === 403) {
+              alert('No autorizado');
+              return;
           }
           setConversations(prev => prev.filter(c => c._id !== id));
         })

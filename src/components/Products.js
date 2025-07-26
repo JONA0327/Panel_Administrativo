@@ -1,4 +1,5 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { apiFetch } from '../utils/api';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
@@ -119,13 +120,13 @@ const Products = forwardRef((props, ref) => {
   const currencies = ['USD', 'EUR', 'MXN', 'COP', 'ARS'];
   const subfolderMap = Object.fromEntries(subfolders.map(sf => [sf.folderId, sf.name]));
 
-  useEffect(() => {
-    fetch(`${API_URL}/products`)
-      .then(async res => {
-        if (res.status === 403) {
-          alert('No autorizado');
-          return [];
-        }
+    useEffect(() => {
+      apiFetch(`${API_URL}/products`)
+        .then(async res => {
+          if (res.status === 403) {
+            alert('No autorizado');
+            return [];
+          }
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           throw new Error(err.error || err.message || 'Failed to load products');
@@ -135,12 +136,12 @@ const Products = forwardRef((props, ref) => {
       .then(data => setProducts(data))
       .catch(err => console.error(err));
 
-    fetch(`${API_URL}/config/subfolders`)
-      .then(async res => {
-        if (res.status === 403) {
-          alert('No autorizado');
-          return [];
-        }
+      apiFetch(`${API_URL}/config/subfolders`)
+        .then(async res => {
+          if (res.status === 403) {
+            alert('No autorizado');
+            return [];
+          }
         return res.json();
       })
       .then(setSubfolders)
@@ -237,11 +238,11 @@ const handleSubmit = (e) => {
   setSubmitError(null); // Limpia cualquier error previo
   setIsSaving(true);
 
-  fetch(`${API_URL}/products`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      ...formData,                         // Incluye todos los campos del formulario
+    apiFetch(`${API_URL}/products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...formData,                         // Incluye todos los campos del formulario
       price: parseFloat(formData.price),  // Convierte price a número
       subfolderId: formData.subfolderId || undefined
     })
@@ -289,11 +290,11 @@ const handleUpdate = (e) => {
       payload.image = formData.image;
     }
 
-  fetch(`${API_URL}/products/${editingProduct._id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  })
+    apiFetch(`${API_URL}/products/${editingProduct._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
       .then(async res => {
         if (res.status === 403) {
           alert('No autorizado');
@@ -321,11 +322,11 @@ const handleUpdate = (e) => {
 
   const deleteProduct = (productId) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
-      fetch(`${API_URL}/products/${productId}`, { method: 'DELETE' })
-        .then(res => {
-          if (res.status === 403) {
-            alert('No autorizado');
-            return;
+        apiFetch(`${API_URL}/products/${productId}`, { method: 'DELETE' })
+          .then(res => {
+            if (res.status === 403) {
+              alert('No autorizado');
+              return;
           }
           setProducts(prev => prev.filter(product => product._id !== productId));
         })

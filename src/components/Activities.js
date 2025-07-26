@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiFetch } from '../utils/api';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
@@ -7,11 +8,11 @@ function Activities() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_URL}/activities`)
-      .then(async res => {
-        if (res.status === 403) {
-          alert('No autorizado');
-          return [];
+      apiFetch(`${API_URL}/activities`)
+        .then(async res => {
+          if (res.status === 403) {
+            alert('No autorizado');
+            return [];
         }
         return res.json();
       })
@@ -22,11 +23,11 @@ function Activities() {
 
   const deleteActivity = (id) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar esta actividad?')) {
-      fetch(`${API_URL}/activities/${id}`, { method: 'DELETE' })
-        .then(res => {
-          if (res.status === 403) {
-            alert('No autorizado');
-            return;
+        apiFetch(`${API_URL}/activities/${id}`, { method: 'DELETE' })
+          .then(res => {
+            if (res.status === 403) {
+              alert('No autorizado');
+              return;
           }
           setActivities(prev => prev.filter(a => a._id !== id));
         })
