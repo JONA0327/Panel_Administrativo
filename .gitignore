@@ -7,3 +7,4 @@ build/
 .env
 # Ignorar credenciales de Google
 server/credenciales/*.json
+server/.env
