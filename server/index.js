@@ -476,7 +476,7 @@ app.use(auth);
 app.use(approvedOnly);
 
 // Crear carpeta raíz en Drive y compartirla con la cuenta de servicio
-app.post('/config/create-root-folder', async (req, res) => {
+app.post('/config/create-root-folder', adminOnly, async (req, res) => {
   if (!drive) {
     return res.status(500).json({ error: 'Drive not configured' });
   }
@@ -519,7 +519,7 @@ app.post('/config/create-root-folder', async (req, res) => {
 });
 
 // Endpoint para configurar carpeta de Drive
-app.post('/config/drive-folder', async (req, res) => {
+app.post('/config/drive-folder', adminOnly, async (req, res) => {
   const { folderId } = req.body;
   if (!folderId || typeof folderId !== 'string') {
     return res.status(400).json({ error: 'Folder ID required' });
@@ -564,17 +564,17 @@ app.post('/config/drive-folder', async (req, res) => {
 });
 
 // Obtener carpeta actual de Drive
-app.get('/config/drive-folder', (req, res) => {
+app.get('/config/drive-folder', adminOnly, (req, res) => {
   res.json({ folderId: driveFolderId });
 });
 
 // Obtener token de Google Drive
-app.get('/config/drive-token', (req, res) => {
+app.get('/config/drive-token', adminOnly, (req, res) => {
   res.json({ token: driveAccessToken, exp: driveTokenExp });
 });
 
 // Guardar token de Google Drive
-app.post('/config/drive-token', async (req, res) => {
+app.post('/config/drive-token', adminOnly, async (req, res) => {
   const { token, exp } = req.body || {};
   try {
     const cfg = await Config.findOneAndUpdate(
@@ -592,7 +592,7 @@ app.post('/config/drive-token', async (req, res) => {
 });
 
 // Configurar carpeta de Drive para testimonios
-app.post('/config/testimonials-folder', async (req, res) => {
+app.post('/config/testimonials-folder', adminOnly, async (req, res) => {
   const { folderId } = req.body;
   if (!folderId || typeof folderId !== 'string') {
     return res.status(400).json({ error: 'Folder ID required' });
@@ -627,12 +627,12 @@ app.post('/config/testimonials-folder', async (req, res) => {
   }
 });
 
-app.get('/config/testimonials-folder', (req, res) => {
+app.get('/config/testimonials-folder', adminOnly, (req, res) => {
   res.json({ folderId: testimonialsFolderId });
 });
 
 // Obtener el email de la cuenta de servicio
-app.get('/config/service-account', (req, res) => {
+app.get('/config/service-account', adminOnly, (req, res) => {
   if (!serviceAccountCreds) {
     return res.status(404).json({ error: 'Service account not configured' });
   }
@@ -640,7 +640,7 @@ app.get('/config/service-account', (req, res) => {
 });
 
 // Crear subcarpeta en la carpeta principal de Drive
-app.post('/config/subfolders', async (req, res) => {
+app.post('/config/subfolders', adminOnly, async (req, res) => {
   const { name } = req.body;
   if (!name || typeof name !== 'string' || !name.trim()) {
     return res.status(400).json({ error: 'Name required' });
@@ -693,7 +693,7 @@ app.post('/config/subfolders', async (req, res) => {
 });
 
 // Obtener subcarpetas guardadas
-app.get('/config/subfolders', async (req, res) => {
+app.get('/config/subfolders', adminOnly, async (req, res) => {
   try {
     const cfg = await Config.findOne();
     res.json(cfg?.subfolders || []);
@@ -704,7 +704,7 @@ app.get('/config/subfolders', async (req, res) => {
 });
 
 // Eliminar una subcarpeta registrada y opcionalmente su carpeta en Drive
-app.delete('/config/subfolders/:id', async (req, res) => {
+app.delete('/config/subfolders/:id', adminOnly, async (req, res) => {
   const { id } = req.params;
   try {
     await Config.updateOne({}, { $pull: { subfolders: { folderId: id } } });
