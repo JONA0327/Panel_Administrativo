@@ -263,6 +263,7 @@ function GoogleDriveAuth({ onAuthenticated }) {
       setRootFolderId(folderId);
       localStorage.setItem("drive_folder_path", path);
       localStorage.setItem("drive_folder_id", folderId);
+      setShowFolderOptions(false);
 
       alert(`Carpeta creada exitosamente: ${response.result.name}`);
     } catch (err) {
@@ -474,7 +475,22 @@ function GoogleDriveAuth({ onAuthenticated }) {
                 Usar esta carpeta
               </button>
             </form>
-            {/* ... el resto de opciones de crear carpeta principal y subcarpeta ... */}
+            <div className="flex mt-3 space-x-2">
+              <input
+                type="text"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                placeholder="Nueva carpeta principal"
+              />
+              <button
+                onClick={handleCreateFolder}
+                disabled={isCreatingRoot}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
+              >
+                {isCreatingRoot ? "Creando..." : "Crear"}
+              </button>
+            </div>
           </div>
         </div>
       )}
