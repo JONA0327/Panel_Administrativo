@@ -475,6 +475,49 @@ app.patch('/auth/approve/:id', auth, adminOnly, async (req, res) => {
 app.use(auth);
 app.use(approvedOnly);
 
+// Crear carpeta raíz en Drive y compartirla con la cuenta de servicio
+app.post('/config/create-root-folder', async (req, res) => {
+  if (!drive) {
+    return res.status(500).json({ error: 'Drive not configured' });
+  }
+  try {
+    const name = (req.body?.name && String(req.body.name).trim()) || 'MediPanel_Storage';
+    const response = await drive.files.create({
+      requestBody: { name, mimeType: 'application/vnd.google-apps.folder' },
+      fields: 'id'
+    });
+    const folderId = response.data.id;
+
+    if (serviceAccountCreds) {
+      try {
+        await drive.permissions.create({
+          fileId: folderId,
+          requestBody: {
+            role: 'writer',
+            type: 'user',
+            emailAddress: serviceAccountCreds.client_email
+          }
+        });
+      } catch (err) {
+        console.warn('⚠️ No se pudo compartir la carpeta con la cuenta de servicio:', err.message);
+      }
+    }
+
+    const cfg = await Config.findOneAndUpdate(
+      {},
+      { driveFolderId: folderId },
+      { new: true, upsert: true }
+    );
+    driveFolderId = cfg.driveFolderId;
+    const link = `https://drive.google.com/drive/folders/${folderId}`;
+    res.status(201).json({ folderId, link });
+    await logActivity('Config updated', 'Root folder created', req.user?._id);
+  } catch (err) {
+    console.error('Error creating root folder:', err);
+    res.status(500).json({ error: 'Failed to create folder', details: err.message });
+  }
+});
+
 // Endpoint para configurar carpeta de Drive
 app.post('/config/drive-folder', async (req, res) => {
   const { folderId } = req.body;
