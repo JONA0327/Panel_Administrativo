@@ -69,6 +69,16 @@ selecting the folder. If the service account is not shared on the folder,
 backend requests to create subfolders or upload images will fail with `File not
 found` errors.
 
+You can also create a new Drive folder directly from the API:
+
+```http
+POST /config/create-root-folder
+```
+
+Send an optional `name` and the server will create the folder (default
+`MediPanel_Storage`), share it with the service account and store the resulting
+`folderId` in MongoDB. The response includes the `folderId` and a direct `link`.
+
 If you modify `.env` while the development server is running, restart the React
 server so the new values are loaded.
 
