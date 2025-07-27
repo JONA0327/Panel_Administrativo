@@ -103,19 +103,28 @@ if (serviceAccountPathExists) {
   }
 }
 
-if (serviceAccountCreds) {
-  const auth = serviceAccountPathExists
-    ? new google.auth.GoogleAuth({
-        keyFile: serviceAccountPath,
-        scopes: ['https://www.googleapis.com/auth/drive']
-      })
-    : new google.auth.GoogleAuth({
-        credentials: serviceAccountCreds,
-        scopes: ['https://www.googleapis.com/auth/drive']
-      });
-  drive = google.drive({ version: 'v3', auth });
-} else {
-  console.warn('⚠️ No se encontró el archivo de credenciales de Google Drive. Revisa GOOGLE_SERVICE_ACCOUNT_PATH o GOOGLE_SERVICE_ACCOUNT_JSON.');
+function initDrive() {
+  if (driveAccessToken) {
+    const oauth = new google.auth.OAuth2();
+    oauth.setCredentials({ access_token: driveAccessToken });
+    drive = google.drive({ version: 'v3', auth: oauth });
+  } else if (serviceAccountCreds) {
+    const auth = serviceAccountPathExists
+      ? new google.auth.GoogleAuth({
+          keyFile: serviceAccountPath,
+          scopes: ['https://www.googleapis.com/auth/drive']
+        })
+      : new google.auth.GoogleAuth({
+          credentials: serviceAccountCreds,
+          scopes: ['https://www.googleapis.com/auth/drive']
+        });
+    drive = google.drive({ version: 'v3', auth });
+  } else {
+    drive = null;
+    console.warn(
+      '⚠️ No se encontró un token de Drive ni credenciales de Google Drive.'
+    );
+  }
 }
 
 // Conexión a MongoDB y carga inicial de configuración
@@ -142,6 +151,9 @@ mongoose.connect(process.env.MONGODB_URI, {
     driveAccessToken = cfg.driveAccessToken;
     driveTokenExp = cfg.driveTokenExp || 0;
   }
+
+  // Initialize Drive client using token or service account
+  initDrive();
 
   // Si tenemos drive y carpeta, compartimos la carpeta con la cuenta de servicio
   if (drive && driveFolderId && serviceAccountCreds) {
@@ -584,6 +596,7 @@ app.post('/config/drive-token', adminOnly, async (req, res) => {
     );
     driveAccessToken = cfg.driveAccessToken;
     driveTokenExp = cfg.driveTokenExp;
+    initDrive();
     res.json({ message: 'Drive token updated' });
   } catch (err) {
     console.error('Error saving Drive token:', err);
