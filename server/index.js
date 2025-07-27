@@ -216,19 +216,7 @@ mongoose.connect(process.env.MONGODB_URI, {
   }
 
   // Ensure admin account exists
-  if (ADMIN_EMAIL) {
-    let adminUser = await User.findOne({ email: ADMIN_EMAIL });
-    if (!adminUser) {
-      const hash = await bcrypt.hash(ADMIN_PASSWORD, BCRYPT_ROUNDS);
-      adminUser = await User.create({
-        email: ADMIN_EMAIL,
-        name: 'Admin',
-        passwordHash: hash,
-        approved: true
-      });
-      console.log(`✅ Admin user ${ADMIN_EMAIL} creado`);
-    }
-  }
+  await ensureAdminAccount();
 })
 .catch(err => console.error('❌ MongoDB connection error:', err));
 
