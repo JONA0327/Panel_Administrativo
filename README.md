@@ -88,8 +88,9 @@ The backend API lives in the `server/` folder. To run it locally you need Node.j
 dependencies installed and a MongoDB instance running. Set the `MONGODB_URI`
 environment variable if you want to use a custom database URL. Drive uploads
 require either `GOOGLE_SERVICE_ACCOUNT_PATH` pointing to your service account JSON file
-or `GOOGLE_SERVICE_ACCOUNT_JSON` with the credentials inline. You may optionally define `GOOGLE_DRIVE_FOLDER_ID` and
-`GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID` to select default upload folders for
+or `GOOGLE_SERVICE_ACCOUNT_JSON` with the credentials inline. The folder used for uploads must be shared with the service account,
+otherwise store a valid OAuth token using `/config/drive-token`.
+You may optionally define `GOOGLE_DRIVE_FOLDER_ID` and `GOOGLE_DRIVE_TESTIMONIALS_FOLDER_ID` to select default upload folders for
 product images and testimonial videos. If these variables are omitted, the
 folders can be selected through the application and sent to the backend using
 the configuration endpoints.
@@ -125,7 +126,8 @@ MongoDB. `GET /config/drive-token` returns `{ token, exp }` while
 loads any stored token on startup and saves new tokens whenever a user
 authenticates. Signing out sends an empty token so the server record is cleared.
 This lets the Drive connection survive browser restarts without requiring the
-user to log in again.
+user to log in again. Uploading files will work as long as a valid token is
+stored here or the configured Drive folder is shared with the service account.
 
 ### Serving product images
 
