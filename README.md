@@ -111,6 +111,22 @@ npm install           # install server dependencies
 npm run dev           # start with nodemon
 ```
 
+When running `npm run dev` the backend expects a `.env` file inside the
+`server/` directory. Copy your root configuration there if it doesn't exist:
+
+```bash
+cp .env server/.env
+```
+
+If you prefer keeping the environment file only in the project root, modify
+`server/index.js` to load it explicitly:
+
+```javascript
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+```
+
+Either approach ensures the server loads the correct variables.
+
 The server listens on port `4000` by default.
 
 ### Drive access tokens
