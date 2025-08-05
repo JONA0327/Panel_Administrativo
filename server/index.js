@@ -385,7 +385,7 @@ app.post('/database/backup', async (req, res) => {
 // ===== FIN DE RUTAS DE BASE DE DATOS =====
 
 // InfoUsers routes
-app.get('/info-users', authenticateToken, async (req, res) => {
+app.get('/info-users', auth, async (req, res) => {
   try {
     const users = await getInfoUsers();
     res.json(users);
@@ -395,7 +395,7 @@ app.get('/info-users', authenticateToken, async (req, res) => {
   }
 });
 
-app.patch('/info-users/:id', authenticateToken, async (req, res) => {
+app.patch('/info-users/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -425,7 +425,7 @@ app.patch('/info-users/:id', authenticateToken, async (req, res) => {
   }
 });
 
-app.delete('/info-users/:id', authenticateToken, async (req, res) => {
+app.delete('/info-users/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
     
