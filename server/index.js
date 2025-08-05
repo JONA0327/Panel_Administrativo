@@ -19,6 +19,9 @@ const Testimonial = require('./DB/testimonials');
 const Activity = require('./DB/activities');
 const User = require('./DB/users');
 const Conversation = require('./DB/conversations');
+const { getInfoUsers } = require('./DB/infoUsers');
+const { MongoClient, ObjectId } = require('mongodb');
+const infoUsersCollection = 'InfoUsers';
 
 const app = express();
 app.use(cors());

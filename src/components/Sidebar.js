@@ -1,6 +1,7 @@
 import React from 'react';
 
 function Sidebar({ currentView, setCurrentView, isAdmin, email, onLogout }) {
+
   const entries = [
     { name: 'Dashboard', icon: '🏠', gradient: 'from-blue-500 to-cyan-500' },
     { name: 'Productos', icon: '📦', gradient: 'from-emerald-500 to-teal-500' },
@@ -9,6 +10,7 @@ function Sidebar({ currentView, setCurrentView, isAdmin, email, onLogout }) {
     { name: 'Testimonios', icon: '💬', gradient: 'from-orange-500 to-amber-500' },
     { name: 'Conversaciones', icon: '💭', gradient: 'from-indigo-500 to-blue-500' },
     { name: 'Actividades', icon: '📊', gradient: 'from-green-500 to-emerald-500' },
+    { name: 'InfoUsers', icon: '🧑‍💼', gradient: 'from-fuchsia-500 to-cyan-500' },
   ];
 
   if (isAdmin) {
@@ -113,3 +115,4 @@ function Sidebar({ currentView, setCurrentView, isAdmin, email, onLogout }) {
 }
 
 export default Sidebar;
+
