@@ -399,15 +399,14 @@ app.patch('/info-users/:id', auth, async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    const { MongoClient } = require('mongodb');
     const client = new MongoClient(process.env.MONGODB_URI);
-    
+
     await client.connect();
     const db = client.db('admin');
     const collection = db.collection('InfoUsers');
-    
+
     const result = await collection.updateOne(
-      { _id: new require('mongodb').ObjectId(id) },
+      { _id: new ObjectId(id) },
       { $set: updateData }
     );
     
@@ -428,15 +427,14 @@ app.delete('/info-users/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
     
-    const { MongoClient } = require('mongodb');
     const client = new MongoClient(process.env.MONGODB_URI);
-    
+
     await client.connect();
     const db = client.db('admin');
     const collection = db.collection('InfoUsers');
-    
+
     const result = await collection.deleteOne(
-      { _id: new require('mongodb').ObjectId(id) }
+      { _id: new ObjectId(id) }
     );
     
     await client.close();
