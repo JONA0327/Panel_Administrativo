@@ -10,7 +10,7 @@ function Sidebar({ currentView, setCurrentView, isAdmin, email, onLogout }) {
     { name: 'Testimonios', icon: '💬', gradient: 'from-orange-500 to-amber-500' },
     { name: 'Conversaciones', icon: '💭', gradient: 'from-indigo-500 to-blue-500' },
     { name: 'Actividades', icon: '📊', gradient: 'from-green-500 to-emerald-500' },
-    { name: 'InfoUsers', icon: '🧑‍💼', gradient: 'from-fuchsia-500 to-cyan-500' },
+    { name: 'InfoUsers', icon: '🧑‍💼', gradient: 'from-fuchsia-500 to-pink-500' },
   ];
 
   if (isAdmin) {
@@ -24,7 +24,7 @@ function Sidebar({ currentView, setCurrentView, isAdmin, email, onLogout }) {
   const userInfo = { role: isAdmin ? 'Admin' : 'Invitado', email };
 
   return (
-    <aside className="bg-gradient-to-b from-white via-slate-50 to-slate-100 shadow-2xl w-80 p-6 border-r border-slate-200/50 backdrop-blur-xl">
+    <aside className="bg-gradient-to-b from-white via-slate-50 to-slate-100 shadow-2xl w-80 p-6 border-r border-slate-200/50 backdrop-blur-xl flex flex-col min-h-screen">
       {/* Header */}
       <div className="mb-10">
         <div className="flex items-center space-x-3 mb-2">
@@ -41,7 +41,7 @@ function Sidebar({ currentView, setCurrentView, isAdmin, email, onLogout }) {
       </div>
       
       {/* Navigation */}
-      <nav className="mb-8">
+      <nav className="flex-1 mb-8 overflow-y-auto">
         <ul className="space-y-3">
           {entries.map((entry) => (
             <li key={entry.name}>
@@ -84,7 +84,7 @@ function Sidebar({ currentView, setCurrentView, isAdmin, email, onLogout }) {
       </nav>
 
       {/* User Profile */}
-      <div className="mt-auto">
+      <div className="mt-auto flex-shrink-0">
         <div className="bg-gradient-to-br from-white/80 to-slate-50/80 backdrop-blur-sm rounded-3xl border border-white/50 p-6 shadow-xl">
           <div className="flex items-center space-x-4 mb-4">
             <div className="relative">
