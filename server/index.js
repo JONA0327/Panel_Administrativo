@@ -20,6 +20,7 @@ const Activity = require('./DB/activities');
 const User = require('./DB/users');
 const Conversation = require('./DB/conversations');
 const { getInfoUsers } = require('./DB/infoUsers');
+const { getInfoUsers } = require('./DB/infoUsers');
 const { MongoClient, ObjectId } = require('mongodb');
 const infoUsersCollection = 'InfoUsers';
 
@@ -382,6 +383,75 @@ app.post('/database/backup', async (req, res) => {
 });
 
 // ===== FIN DE RUTAS DE BASE DE DATOS =====
+
+// InfoUsers routes
+app.get('/info-users', authenticateToken, async (req, res) => {
+  try {
+    const users = await getInfoUsers();
+    res.json(users);
+  } catch (err) {
+    console.error('Error fetching InfoUsers:', err);
+    res.status(500).json({ error: 'Failed to fetch InfoUsers' });
+  }
+});
+
+app.patch('/info-users/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    const { MongoClient } = require('mongodb');
+    const client = new MongoClient(process.env.MONGODB_URI);
+    
+    await client.connect();
+    const db = client.db('admin');
+    const collection = db.collection('InfoUsers');
+    
+    const result = await collection.updateOne(
+      { _id: new require('mongodb').ObjectId(id) },
+      { $set: updateData }
+    );
+    
+    await client.close();
+    
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ message: 'User updated successfully' });
+  } catch (err) {
+    console.error('Error updating InfoUser:', err);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+app.delete('/info-users/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { MongoClient } = require('mongodb');
+    const client = new MongoClient(process.env.MONGODB_URI);
+    
+    await client.connect();
+    const db = client.db('admin');
+    const collection = db.collection('InfoUsers');
+    
+    const result = await collection.deleteOne(
+      { _id: new require('mongodb').ObjectId(id) }
+    );
+    
+    await client.close();
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ message: 'User deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting InfoUser:', err);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
 
 // ----- Rutas de autenticación -----
 app.post('/auth/register', async (req, res) => {
