@@ -13,6 +13,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import PendingApproval from './components/PendingApproval';
 import AdminUsers from './components/AdminUsers';
+import InfoUsers from './components/InfoUsers';
 
 function App() {
   const [currentView, setCurrentView] = useState('Dashboard');
@@ -80,6 +81,8 @@ function App() {
         return auth.isAdmin ? <Settings /> : <Dashboard />;
       case 'Usuarios':
         return <AdminUsers />;
+      case 'InfoUsers':
+        return <InfoUsers />;
       default:
         return <Dashboard />;
     }
