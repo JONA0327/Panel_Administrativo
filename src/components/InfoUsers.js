@@ -256,6 +256,7 @@ export default function InfoUsers() {
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-slate-50 to-slate-100">
                   <tr>
+                    <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider w-32">ID</th>
                     <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Nombre</th>
                     <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Teléfono</th>
                     <th className="px-6 py-4 text-left text-sm font-bold text-slate-700 uppercase tracking-wider">Status</th>
@@ -268,6 +269,7 @@ export default function InfoUsers() {
                     const conv = getConversationByPhone(user.phone);
                     return (
                       <tr key={user._id} className={`hover:bg-slate-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}`}>
+                        <td className="px-6 py-4 font-mono text-xs text-slate-500 w-32 truncate">{user._id}</td>
                         <td className="px-6 py-4">
                           {editingId === user._id ? (
                             <input
