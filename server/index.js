@@ -1640,13 +1640,27 @@ app.get('/conversations/:id', async (req, res) => {
 });
 
 app.delete('/conversations/:id', async (req, res) => {
+  let client;
   try {
     const conv = await Conversation.findByIdAndDelete(req.params.id);
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });
-    res.json({ message: 'Conversation deleted' });
+
+    const normalizedPhone = normalizePhone(conv.phone);
+
+    client = new MongoClient(dbUrl);
+    await client.connect();
+    const db = client.db(dbName);
+    const collection = db.collection(infoUsersCollection);
+    await collection.deleteOne({ phone: normalizedPhone });
+
+    res.json({ message: 'Conversation and user deleted successfully' });
   } catch (err) {
     console.error('Error deleting conversation:', err);
     res.status(500).json({ error: 'Failed to delete conversation' });
+  } finally {
+    if (client) {
+      await client.close();
+    }
   }
 });
 
