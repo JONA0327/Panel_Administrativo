@@ -1,5 +1,5 @@
 export function normalizePhone(phone = '') {
   return String(phone)
-    .replace(/@s\.whatsapp\.net$/, '')
+    .replace(/@[^\s]+$/, '')
     .replace(/\D/g, '');
 }
