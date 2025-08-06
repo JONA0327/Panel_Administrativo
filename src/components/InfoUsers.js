@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { normalizePhone } from '../utils/normalizePhone';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
@@ -49,7 +50,8 @@ export default function InfoUsers() {
   }
 
   function getConversationByPhone(phone) {
-    return conversations.find(c => c.phone === phone);
+    const target = normalizePhone(phone);
+    return conversations.find(c => normalizePhone(c.phone) === target);
   }
 
   function handleEdit(id, user) {
