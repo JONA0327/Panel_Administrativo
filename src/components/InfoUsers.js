@@ -54,11 +54,35 @@ export default function InfoUsers() {
 
   function handleEdit(id, user) {
     setEditingId(id);
-    setEditData({ ...user });
+    setEditData({ name: user.name, phone: user.phone });
   }
 
   function handleChange(e) {
     setEditData({ ...editData, [e.target.name]: e.target.value });
+  }
+
+  async function handleStatusChange(id, newStatus) {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/info-users/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (!response.ok) {
+        throw new Error('Error actualizando estado');
+      }
+
+      setUsers(prev =>
+        prev.map(u => (u._id === id ? { ...u, status: newStatus } : u))
+      );
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   async function handleSave(id) {
@@ -306,28 +330,16 @@ export default function InfoUsers() {
                           )}
                         </td>
                         <td className="px-6 py-4">
-                          {editingId === user._id ? (
-                            <select
-                              name="status"
-                              value={editData.status || ''}
-                              onChange={handleChange}
-                              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            >
-                              <option value="iniciado">Iniciado</option>
-                              <option value="activo">Activo</option>
-                              <option value="finalizado">Finalizado</option>
-                            </select>
-                          ) : (
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
-                              user.status === 'activo' 
-                                ? 'bg-green-100 text-green-700 border border-green-200'
-                                : user.status === 'iniciado'
-                                ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                                : 'bg-slate-100 text-slate-700 border border-slate-200'
-                            }`}>
-                              {user.status || 'Sin estado'}
-                            </span>
-                          )}
+                          <select
+                            name="status"
+                            value={user.status || ''}
+                            onChange={e => handleStatusChange(user._id, e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          >
+                            <option value="iniciado">Iniciado</option>
+                            <option value="prospecto">Prospecto</option>
+                            <option value="seguimiento">Seguimiento</option>
+                          </select>
                         </td>
                         <td className="px-6 py-4">
                           {conv ? (
