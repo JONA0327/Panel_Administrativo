@@ -2,7 +2,7 @@ const { MongoClient } = require('mongodb');
 const config = require('./config');
 
 // URL y nombre de la base de datos desde el archivo de configuración
-dbUrl = config.MONGODB_URI || process.env.MONGODB_URI;
+const dbUrl = config.MONGODB_URI || process.env.MONGODB_URI;
 const dbName = 'admin'; // Cambia si tu base de datos tiene otro nombre
 const collectionName = 'InfoUsers';
 
