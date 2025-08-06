@@ -22,6 +22,7 @@ const Conversation = require('./DB/conversations');
 const { getInfoUsers } = require('./DB/infoUsers');
 const { MongoClient, ObjectId } = require('mongodb');
 const infoUsersCollection = 'InfoUsers';
+const { normalizePhone } = require('./utils/normalizePhone');
 
 const app = express();
 app.use(cors());
@@ -387,7 +388,8 @@ app.post('/database/backup', async (req, res) => {
 app.get('/info-users', auth, async (req, res) => {
   try {
     const users = await getInfoUsers();
-    res.json(users);
+    const normalized = users.map(u => ({ ...u, phone: normalizePhone(u.phone) }));
+    res.json(normalized);
   } catch (err) {
     console.error('Error fetching InfoUsers:', err);
     res.status(500).json({ error: 'Failed to fetch InfoUsers' });
@@ -398,6 +400,9 @@ app.patch('/info-users/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
+    if (updateData.phone) {
+      updateData.phone = normalizePhone(updateData.phone);
+    }
     
     const client = new MongoClient(process.env.MONGODB_URI);
 
@@ -1610,7 +1615,10 @@ app.get('/testimonials/:id/video', async (req, res) => {
 // ----- Conversaciones -----
 app.get('/conversations', async (req, res) => {
   try {
-    const convs = await Conversation.find({}, { messages: 0 });
+    const convs = await Conversation.find({}, { messages: 0 }).lean();
+    convs.forEach(c => {
+      if (c.phone) c.phone = normalizePhone(c.phone);
+    });
     res.json(convs);
   } catch (err) {
     console.error('Error fetching conversations:', err);
@@ -1620,11 +1628,11 @@ app.get('/conversations', async (req, res) => {
 
 app.get('/conversations/:id', async (req, res) => {
   try {
-    const conv = await Conversation.findById(req.params.id);
+    const conv = await Conversation.findById(req.params.id).lean();
     if (!conv) return res.status(404).json({ error: 'Conversation not found' });
-    const data = conv.toObject();
-    if (!Array.isArray(data.messages)) data.messages = [];
-    res.json(data);
+    if (conv.phone) conv.phone = normalizePhone(conv.phone);
+    if (!Array.isArray(conv.messages)) conv.messages = [];
+    res.json(conv);
   } catch (err) {
     console.error('Error fetching conversation:', err);
     res.status(500).json({ error: 'Failed to fetch conversation' });
