@@ -1,9 +1,21 @@
 const { MongoClient } = require('mongodb');
 const config = require('./config');
 
-// URL y nombre de la base de datos desde el archivo de configuración
-dbUrl = config.MONGODB_URI || process.env.MONGODB_URI;
-const dbName = 'admin'; // Cambia si tu base de datos tiene otro nombre
+// URL y nombre de la base de datos desde el archivo de configuración o variables de entorno
+const dbUrl = config.MONGODB_URI || process.env.MONGODB_URI;
+
+// Permite configurar el nombre de la base de datos mediante DB_NAME o deducirlo de la URI
+const dbName =
+  process.env.DB_NAME ||
+  (() => {
+    try {
+      return dbUrl ? new URL(dbUrl).pathname.replace('/', '') : undefined;
+    } catch {
+      return undefined;
+    }
+  })() ||
+  'admin';
+
 const collectionName = 'InfoUsers';
 
 async function getInfoUsers() {
@@ -33,4 +45,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { getInfoUsers };
+module.exports = { getInfoUsers, dbUrl, dbName };

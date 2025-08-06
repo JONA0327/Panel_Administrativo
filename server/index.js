@@ -19,7 +19,7 @@ const Testimonial = require('./DB/testimonials');
 const Activity = require('./DB/activities');
 const User = require('./DB/users');
 const Conversation = require('./DB/conversations');
-const { getInfoUsers } = require('./DB/infoUsers');
+const { getInfoUsers, dbUrl, dbName } = require('./DB/infoUsers');
 const { MongoClient, ObjectId } = require('mongodb');
 const infoUsersCollection = 'InfoUsers';
 const { normalizePhone } = require('./utils/normalizePhone');
@@ -404,11 +404,11 @@ app.patch('/info-users/:id', auth, async (req, res) => {
       updateData.phone = normalizePhone(updateData.phone);
     }
     
-    const client = new MongoClient(process.env.MONGODB_URI);
+    const client = new MongoClient(dbUrl);
 
     await client.connect();
-    const db = client.db('admin');
-    const collection = db.collection('InfoUsers');
+    const db = client.db(dbName);
+    const collection = db.collection(infoUsersCollection);
 
     const result = await collection.updateOne(
       { _id: new ObjectId(id) },
@@ -432,11 +432,11 @@ app.delete('/info-users/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
     
-    const client = new MongoClient(process.env.MONGODB_URI);
+    const client = new MongoClient(dbUrl);
 
     await client.connect();
-    const db = client.db('admin');
-    const collection = db.collection('InfoUsers');
+    const db = client.db(dbName);
+    const collection = db.collection(infoUsersCollection);
 
     const result = await collection.deleteOne(
       { _id: new ObjectId(id) }
